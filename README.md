@@ -963,7 +963,7 @@ sum(rate(acti & Community
 
 **For questions and discussions:**
 - ðŸ’¬ GitHub Discussions (coming soon)
-- ðŸ“§ Email: nidhi.upadhye03@gmail.com
+- ðŸ“§ Email: nidhiupadhye1302@gmail.com
 - ðŸ“– Read the docs: [Documentation](#-documentation)
 
 **For urgent support:**
@@ -1130,7 +1130,7 @@ Primary contribution by Nidhi:
 For questions, issues, or feedback:
 
 - ðŸ“ Open a [GitHub Issue](https://github.com/nidhi-upadhye03/Agentic-system-for-devops/issues)
-- ðŸ“§ Email: nidhi.upadhye03@gmail.com
+- ðŸ“§ Email: nidhiupadhye1302@gmail.com
 - ðŸ“– Read the docs: [IMPLEMENTATION_TRACKER.md](IMPLEMENTATION_TRACKER.md), [FUTUREVISION.md](FUTUREVISION.md)
 
 ---
