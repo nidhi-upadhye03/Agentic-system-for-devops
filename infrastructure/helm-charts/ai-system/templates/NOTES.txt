@@ -1,0 +1,143 @@
+******************************************************************************
+***   AI System has been successfully deployed!                           ***
+******************************************************************************
+
+Release Name: {{ .Release.Name }}
+Namespace: {{ include "ai-system.namespace" . }}
+Environment: {{ .Values.global.environment }}
+
+{{- if .Values.ingress.enabled }}
+
+1. Access the AI System:
+{{- range .Values.ingress.hosts }}
+
+   Frontend:  https://{{ .host }}
+   Backend:   https://{{ .host }}/api
+   LLM API:   https://{{ .host }}/llm
+{{- end }}
+
+{{- if .Values.ingress.tls }}
+   Note: TLS is enabled. Make sure your certificates are properly configured.
+{{- end }}
+
+{{- else }}
+
+1. Get the application URLs by running these commands:
+
+   {{- if contains "NodePort" .Values.approvalFrontend.service.type }}
+
+   export NODE_PORT=$(kubectl get --namespace {{ include "ai-system.namespace" . }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "ai-system.fullname" . }}-approval-frontend)
+   export NODE_IP=$(kubectl get nodes --namespace {{ include "ai-system.namespace" . }} -o jsonpath="{.items[0].status.addresses[0].address}")
+   echo "Frontend: http://$NODE_IP:$NODE_PORT"
+
+   {{- else if contains "LoadBalancer" .Values.approvalFrontend.service.type }}
+
+   NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+   Watch the status with: kubectl get --namespace {{ include "ai-system.namespace" . }} svc -w {{ include "ai-system.fullname" . }}-approval-frontend
+
+   export SERVICE_IP=$(kubectl get svc --namespace {{ include "ai-system.namespace" . }} {{ include "ai-system.fullname" . }}-approval-frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+   echo "Frontend: http://$SERVICE_IP:{{ .Values.approvalFrontend.service.port }}"
+
+   {{- else if contains "ClusterIP" .Values.approvalFrontend.service.type }}
+
+   kubectl --namespace {{ include "ai-system.namespace" . }} port-forward svc/{{ include "ai-system.fullname" . }}-approval-frontend {{ .Values.approvalFrontend.service.port }}:{{ .Values.approvalFrontend.service.port }}
+   echo "Frontend: http://127.0.0.1:{{ .Values.approvalFrontend.service.port }}"
+
+   {{- end }}
+
+{{- end }}
+
+2. Check the status of your deployment:
+
+   kubectl get pods -n {{ include "ai-system.namespace" . }}
+   kubectl get services -n {{ include "ai-system.namespace" . }}
+
+3. View logs:
+
+   # LLM Service
+   kubectl logs -n {{ include "ai-system.namespace" . }} -l app.kubernetes.io/component=llm-service -f
+
+   # Worker
+   kubectl logs -n {{ include "ai-system.namespace" . }} -l app.kubernetes.io/component=worker -f
+
+   # Approval Backend
+   kubectl logs -n {{ include "ai-system.namespace" . }} -l app.kubernetes.io/component=approval-backend -f
+
+   # Approval Frontend
+   kubectl logs -n {{ include "ai-system.namespace" . }} -l app.kubernetes.io/component=approval-frontend -f
+
+4. Deployed Services:
+
+{{- if .Values.llmService.enabled }}
+   - LLM Service: {{ .Values.llmService.replicaCount }} replica(s)
+{{- end }}
+{{- if .Values.worker.enabled }}
+   - Worker: {{ .Values.worker.replicaCount }} replica(s)
+{{- end }}
+{{- if .Values.approvalBackend.enabled }}
+   - Approval Backend: {{ .Values.approvalBackend.replicaCount }} replica(s)
+{{- end }}
+{{- if .Values.approvalFrontend.enabled }}
+   - Approval Frontend: {{ .Values.approvalFrontend.replicaCount }} replica(s)
+{{- end }}
+{{- if .Values.rabbitmq.enabled }}
+   - RabbitMQ: {{ .Values.rabbitmq.replicaCount }} replica(s)
+{{- end }}
+{{- if .Values.postgresql.enabled }}
+   - PostgreSQL: {{ .Values.postgresql.replicaCount }} replica(s)
+{{- end }}
+{{- if .Values.redis.enabled }}
+   - Redis: {{ .Values.redis.replicaCount }} replica(s)
+{{- end }}
+
+5. Autoscaling Status:
+
+{{- if .Values.llmService.autoscaling.enabled }}
+   - LLM Service HPA: {{ .Values.llmService.autoscaling.minReplicas }}-{{ .Values.llmService.autoscaling.maxReplicas }} replicas
+{{- end }}
+{{- if .Values.worker.autoscaling.enabled }}
+   - Worker HPA: {{ .Values.worker.autoscaling.minReplicas }}-{{ .Values.worker.autoscaling.maxReplicas }} replicas
+{{- end }}
+{{- if .Values.approvalBackend.autoscaling.enabled }}
+   - Backend HPA: {{ .Values.approvalBackend.autoscaling.minReplicas }}-{{ .Values.approvalBackend.autoscaling.maxReplicas }} replicas
+{{- end }}
+{{- if .Values.approvalFrontend.autoscaling.enabled }}
+   - Frontend HPA: {{ .Values.approvalFrontend.autoscaling.minReplicas }}-{{ .Values.approvalFrontend.autoscaling.maxReplicas }} replicas
+{{- end }}
+
+6. Database Management:
+
+   # Connect to PostgreSQL
+   kubectl exec -it -n {{ include "ai-system.namespace" . }} {{ include "ai-system.fullname" . }}-postgres-0 -- psql -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }}
+
+   # Connect to Redis
+   kubectl exec -it -n {{ include "ai-system.namespace" . }} deployment/{{ include "ai-system.fullname" . }}-redis -- redis-cli
+
+7. RabbitMQ Management Console:
+
+   kubectl port-forward -n {{ include "ai-system.namespace" . }} svc/{{ include "ai-system.fullname" . }}-rabbitmq {{ .Values.rabbitmq.service.ports.management }}:{{ .Values.rabbitmq.service.ports.management }}
+
+   Open: http://localhost:{{ .Values.rabbitmq.service.ports.management }}
+   Username: {{ .Values.rabbitmq.auth.username }}
+   Password: <check secrets>
+
+{{- if .Values.networkPolicy.enabled }}
+
+8. Network Policies:
+
+   Network policies are enabled. Ensure proper connectivity between services.
+{{- end }}
+
+{{- if .Values.rbac.enabled }}
+
+9. RBAC:
+
+   RBAC is enabled. Service account: {{ include "ai-system.serviceAccountName" . }}
+{{- end }}
+
+For more information, visit:
+- Documentation: https://docs.ai-system.com
+- GitHub: https://github.com/your-org/ai-system
+- Support: support@ai-system.com
+
+******************************************************************************

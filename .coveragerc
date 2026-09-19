@@ -1,0 +1,32 @@
+[run]
+source = services
+omit =
+    */tests/*
+    */test_*.py
+    */__pycache__/*
+    */venv/*
+    */node_modules/*
+    */build/*
+    */dist/*
+    */.pytest_cache/*
+    */conftest.py
+    */__init__.py
+
+[report]
+precision = 2
+skip_empty = True
+show_missing = True
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
+
+[html]
+directory = coverage_html_report
+
+[xml]
+output = coverage.xml

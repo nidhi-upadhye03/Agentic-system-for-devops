@@ -1,0 +1,22 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-system.fullname" . }}-postgres
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.postgresql.labels" . | nindent 4 }}
+  {{- with .Values.postgresql.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.postgresql.service.type }}
+  ports:
+  - port: {{ .Values.postgresql.service.port }}
+    targetPort: {{ .Values.postgresql.service.targetPort }}
+    protocol: TCP
+    name: postgres
+  selector:
+    {{- include "ai-system.postgresql.selectorLabels" . | nindent 4 }}
+{{- end }}

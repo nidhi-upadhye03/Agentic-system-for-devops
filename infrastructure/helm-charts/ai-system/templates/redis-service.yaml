@@ -1,0 +1,22 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-system.fullname" . }}-redis
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.redis.labels" . | nindent 4 }}
+  {{- with .Values.redis.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.redis.service.type }}
+  ports:
+  - port: {{ .Values.redis.service.port }}
+    targetPort: {{ .Values.redis.service.targetPort }}
+    protocol: TCP
+    name: redis
+  selector:
+    {{- include "ai-system.redis.selectorLabels" . | nindent 4 }}
+{{- end }}

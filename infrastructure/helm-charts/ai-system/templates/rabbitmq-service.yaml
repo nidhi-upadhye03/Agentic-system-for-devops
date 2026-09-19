@@ -1,0 +1,26 @@
+{{- if .Values.rabbitmq.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-system.fullname" . }}-rabbitmq
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.rabbitmq.labels" . | nindent 4 }}
+  {{- with .Values.rabbitmq.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.rabbitmq.service.type }}
+  ports:
+  - port: {{ .Values.rabbitmq.service.ports.amqp }}
+    targetPort: amqp
+    protocol: TCP
+    name: amqp
+  - port: {{ .Values.rabbitmq.service.ports.management }}
+    targetPort: management
+    protocol: TCP
+    name: management
+  selector:
+    {{- include "ai-system.rabbitmq.selectorLabels" . | nindent 4 }}
+{{- end }}

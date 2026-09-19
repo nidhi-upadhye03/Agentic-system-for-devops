@@ -1,0 +1,154 @@
+# Development environment overrides
+global:
+  environment: dev
+  namespace: ai-system-dev
+  domain: dev.ai-system.local
+  imagePullPolicy: Always
+
+llmService:
+  replicaCount: 1
+  image:
+    tag: dev
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  env:
+    LOG_LEVEL: DEBUG
+    MODEL_NAME: gpt-3.5-turbo
+  autoscaling:
+    enabled: false
+
+worker:
+  replicaCount: 2
+  image:
+    tag: dev
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  env:
+    LOG_LEVEL: DEBUG
+    WORKER_CONCURRENCY: "4"
+  autoscaling:
+    enabled: false
+
+approvalBackend:
+  replicaCount: 1
+  image:
+    tag: dev
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  env:
+    NODE_ENV: development
+    LOG_LEVEL: debug
+    CORS_ORIGIN: "*"
+  autoscaling:
+    enabled: false
+
+approvalFrontend:
+  replicaCount: 1
+  image:
+    tag: dev
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    REACT_APP_ENV: development
+  autoscaling:
+    enabled: false
+
+rabbitmq:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  persistence:
+    enabled: false
+  auth:
+    username: admin
+    password: dev-password
+
+postgresql:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  persistence:
+    enabled: false
+  auth:
+    password: dev-password
+
+redis:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  persistence:
+    enabled: false
+  auth:
+    password: dev-password
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: dev.ai-system.local
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: approval-backend
+          port: 3000
+        - path: /llm
+          pathType: Prefix
+          service: llm-service
+          port: 8000
+        - path: /
+          pathType: Prefix
+          service: approval-frontend
+          port: 80
+  tls: []
+
+networkPolicy:
+  enabled: false
+
+rbac:
+  enabled: true
+
+secrets:
+  data:
+    DATABASE_URL: cG9zdGdyZXNxbDovL3Bvc3RncmVzOmRldi1wYXNzd29yZEBwb3N0Z3Jlczo1NDMyL2FpX3N5c3RlbQ==
+    REDIS_URL: cmVkaXM6Ly86ZGV2LXBhc3N3b3JkQHJlZGlzOjYzNzkvMA==
+    RABBITMQ_URL: YW1xcDovL2FkbWluOmRldi1wYXNzd29yZEByYWJiaXRtcTo1NjcyLw==
+    JWT_SECRET: ZGV2LWp3dC1zZWNyZXQ=
+    OPENAI_API_KEY: c2stZGV2LWtleQ==

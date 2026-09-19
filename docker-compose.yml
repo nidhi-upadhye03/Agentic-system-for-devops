@@ -1,0 +1,723 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: devops-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-devops_db}
+      POSTGRES_USER: ${POSTGRES_USER:-devops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devops123}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devops}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: devops-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis123}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: devops-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-devops}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-devops123}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-devops}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_log:/var/log/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # LLM Service (Python FastAPI)
+  llm-service:
+    build:
+      context: ./services/llm-service
+      dockerfile: Dockerfile
+    container_name: devops-llm-service
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LLM_LOG_LEVEL:-info}
+      - PORT=${LLM_SERVICE_PORT:-8000}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PREFERRED_PROVIDER=gemini
+      - QDRANT_HOST=${QDRANT_HOST}
+      - QDRANT_PORT=${QDRANT_HTTP_PORT:-6333}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=${RABBITMQ_USER:-devops}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-devops123}
+      - RABBITMQ_VHOST=${RABBITMQ_VHOST:-devops}
+    ports:
+      - "${LLM_SERVICE_PORT:-8000}:8000"
+    volumes:
+      - ./services/llm-service:/app
+      - llm_models:/app/models
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Worker Service (Python)
+  worker:
+    build:
+      context: ./services/worker-service
+      dockerfile: Dockerfile
+    container_name: devops-worker
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${WORKER_LOG_LEVEL:-info}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-devops_db}
+      - POSTGRES_USER=${POSTGRES_USER:-devops}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devops123}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=${RABBITMQ_USER:-devops}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-devops123}
+      - RABBITMQ_VHOST=${RABBITMQ_VHOST:-devops}
+      - LLM_SERVICE_URL=http://llm-service:8000
+    volumes:
+      - ./services/worker-service:/app
+      - worker_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      llm-service:
+        condition: service_healthy
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Monitoring Agent (Python)
+  monitoring-agent:
+    build:
+      context: ./services/monitoring-agent
+      dockerfile: Dockerfile
+    container_name: devops-monitoring-agent
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${MONITORING_LOG_LEVEL:-INFO}
+      - MONITORING_AGENT_NAME=monitoring
+      - MONITORING_AGENT_VERSION=1.0.0
+      - MONITORING_PROMETHEUS_URL=http://prometheus:9090
+      - MONITORING_PROMETHEUS_SCRAPE_INTERVAL=10
+      - MONITORING_K8S_IN_CLUSTER=false
+      - MONITORING_K8S_NAMESPACE=default
+      - MONITORING_RABBITMQ_HOST=rabbitmq
+      - MONITORING_RABBITMQ_PORT=5672
+      - MONITORING_RABBITMQ_USER=${RABBITMQ_USER:-devops}
+      - MONITORING_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-devops123}
+      - MONITORING_RABBITMQ_VHOST=${RABBITMQ_VHOST:-devops}
+      - MONITORING_RABBITMQ_EXCHANGE=agent_events
+      - MONITORING_REDIS_HOST=redis
+      - MONITORING_REDIS_PORT=6379
+      - MONITORING_REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - MONITORING_POSTGRES_HOST=postgres
+      - MONITORING_POSTGRES_PORT=5432
+      - MONITORING_POSTGRES_DB=${POSTGRES_DB:-devops_db}
+      - MONITORING_POSTGRES_USER=${POSTGRES_USER:-devops}
+      - MONITORING_POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devops123}
+      - MONITORING_CPU_THRESHOLD=90.0
+      - MONITORING_MEMORY_THRESHOLD=90.0
+      - MONITORING_ERROR_RATE_THRESHOLD=10.0
+      - MONITORING_RESPONSE_TIME_THRESHOLD=2000.0
+      - MONITORING_POD_RESTART_THRESHOLD=3
+      - MONITORING_ANOMALY_DETECTION_ENABLED=true
+      - MONITORING_ANOMALY_SENSITIVITY=2.0
+      - MONITORING_MIN_DATA_POINTS=10
+    volumes:
+      - ./services/monitoring-agent:/app
+      - monitoring_logs:/app/logs
+    depends_on:
+      prometheus:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Analyzer Agent (Python)
+  analyzer-agent:
+    build:
+      context: ./services/analyzer-agent
+      dockerfile: Dockerfile
+    container_name: devops-analyzer-agent
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${ANALYZER_LOG_LEVEL:-INFO}
+      - ANALYZER_AGENT_NAME=analyzer
+      - ANALYZER_AGENT_VERSION=1.0.0
+      - ANALYZER_LLM_SERVICE_URL=http://llm-service:8000
+      - ANALYZER_LLM_PROVIDER=gemini
+      - ANALYZER_LLM_MODEL=gemini-2.0-flash
+      - ANALYZER_LLM_TEMPERATURE=0.2
+      - ANALYZER_LLM_MAX_TOKENS=2000
+      - ANALYZER_LLM_TIMEOUT=120
+      - ANALYZER_LLM_MOCK_MODE=false
+      - ANALYZER_RABBITMQ_HOST=rabbitmq
+      - ANALYZER_RABBITMQ_PORT=5672
+      - ANALYZER_RABBITMQ_USER=${RABBITMQ_USER:-devops}
+      - ANALYZER_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-devops123}
+      - RABBITMQ_USER=${RABBITMQ_USER:-devops}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-devops123}
+      - ANALYZER_RABBITMQ_VHOST=${RABBITMQ_VHOST:-devops}
+      - ANALYZER_RABBITMQ_EXCHANGE=agent_events
+      - ANALYZER_RABBITMQ_INCIDENT_ROUTING_KEY=monitoring.incident.*
+      - ANALYZER_RABBITMQ_ANALYSIS_ROUTING_KEY=analyzer.analysis.complete
+      - ANALYZER_REDIS_HOST=redis
+      - ANALYZER_REDIS_PORT=6379
+      - ANALYZER_REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - ANALYZER_POSTGRES_HOST=postgres
+      - ANALYZER_POSTGRES_PORT=5432
+      - ANALYZER_POSTGRES_DB=${POSTGRES_DB:-devops_db}
+      - ANALYZER_POSTGRES_USER=${POSTGRES_USER:-devops}
+      - ANALYZER_POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devops123}
+      - ANALYZER_QDRANT_HOST=${QDRANT_HOST}
+      - ANALYZER_QDRANT_PORT=${QDRANT_HTTP_PORT:-6333}
+      - ANALYZER_QDRANT_COLLECTION=incident_history
+      - ANALYZER_QDRANT_API_KEY=${QDRANT_API_KEY}
+      - ANALYZER_RAG_ENABLED=false
+      - ANALYZER_RAG_TOP_K=5
+      - ANALYZER_RAG_SIMILARITY_THRESHOLD=0.7
+      - ANALYZER_LOG_FETCH_ENABLED=false
+      - ANALYZER_LOG_TIME_WINDOW=600
+      - ANALYZER_LOG_MAX_LINES=100
+    volumes:
+      - ./services/analyzer-agent:/app
+      - analyzer_logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      llm-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Auto-Response Agent (Python)
+  auto-response-agent:
+    build:
+      context: ./services/auto-response-agent
+      dockerfile: Dockerfile
+    container_name: devops-auto-response-agent
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${AUTORESPONSE_LOG_LEVEL:-INFO}
+      - AUTORESPONSE_AGENT_NAME=auto-response
+      - AUTORESPONSE_AGENT_VERSION=1.0.0
+      - AUTORESPONSE_K8S_IN_CLUSTER=false
+      - AUTORESPONSE_K8S_NAMESPACE=default
+      - AUTORESPONSE_K8S_DRY_RUN=${AUTORESPONSE_DRY_RUN:-false}
+      - AUTORESPONSE_RABBITMQ_HOST=rabbitmq
+      - AUTORESPONSE_RABBITMQ_PORT=5672
+      - AUTORESPONSE_RABBITMQ_USER=${RABBITMQ_USER:-devops}
+      - AUTORESPONSE_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-devops123}
+      - AUTORESPONSE_RABBITMQ_VHOST=${RABBITMQ_VHOST:-devops}
+      - AUTORESPONSE_RABBITMQ_EXCHANGE=agent_events
+      - AUTORESPONSE_RABBITMQ_ANALYSIS_ROUTING_KEY=analyzer.analysis.complete
+      - AUTORESPONSE_RABBITMQ_ACTION_ROUTING_KEY=autoresponse.action.executed
+      - AUTORESPONSE_POSTGRES_HOST=postgres
+      - AUTORESPONSE_POSTGRES_PORT=5432
+      - AUTORESPONSE_POSTGRES_DB=${POSTGRES_DB:-devops_db}
+      - AUTORESPONSE_POSTGRES_USER=${POSTGRES_USER:-devops}
+      - AUTORESPONSE_POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devops123}
+      - AUTORESPONSE_APPROVAL_API_URL=http://approval-backend:3000/api
+      - AUTORESPONSE_APPROVAL_TIMEOUT=300
+      - AUTORESPONSE_APPROVAL_POLL_INTERVAL=5
+      - AUTORESPONSE_AUTO_EXECUTE_THRESHOLD=95
+      - AUTORESPONSE_MAX_RETRIES=3
+      - AUTORESPONSE_RETRY_DELAY=10
+      - AUTORESPONSE_MAX_SCALE_REPLICAS=10
+      - AUTORESPONSE_MIN_SCALE_REPLICAS=1
+      - AUTORESPONSE_ACTION_TIMEOUT=120
+      - EXECUTOR_TYPE=docker-compose
+      - DOCKER_COMPOSE_FILE=/compose/docker-compose.yml
+      - DOCKER_COMPOSE_PROJECT=LLM DevOps Copilot-main
+    volumes:
+      - ./services/auto-response-agent:/app
+      - autoresponse_logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+      - ./docker-compose.yml:/compose/docker-compose.yml:ro
+    user: root
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      approval-backend:
+        condition: service_healthy
+      analyzer-agent:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Notifier Agent (Python)
+  notifier-agent:
+    build:
+      context: ./services/notifier-agent
+      dockerfile: Dockerfile
+    container_name: devops-notifier-agent
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${NOTIFIER_LOG_LEVEL:-INFO}
+      - NOTIFIER_AGENT_NAME=notifier
+      - NOTIFIER_AGENT_VERSION=1.0.0
+      - NOTIFIER_SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - NOTIFIER_SLACK_CHANNEL=${SLACK_CHANNEL:-#devops-alerts}
+      - NOTIFIER_SLACK_USERNAME=${SLACK_USERNAME:-DevOps Copilot}
+      - NOTIFIER_SLACK_ICON_EMOJI=${SLACK_ICON_EMOJI:-:robot_face:}
+      - NOTIFIER_SLACK_TIMEOUT=10
+      - NOTIFIER_RABBITMQ_HOST=rabbitmq
+      - NOTIFIER_RABBITMQ_PORT=5672
+      - NOTIFIER_RABBITMQ_USER=${RABBITMQ_USER:-devops}
+      - NOTIFIER_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-devops123}
+      - NOTIFIER_RABBITMQ_VHOST=${RABBITMQ_VHOST:-devops}
+      - NOTIFIER_RABBITMQ_EXCHANGE=agent_events
+      - NOTIFIER_RABBITMQ_INCIDENT_ROUTING_KEY=monitoring.incident.*
+      - NOTIFIER_RABBITMQ_ANALYSIS_ROUTING_KEY=analyzer.analysis.complete
+      - NOTIFIER_RABBITMQ_ACTION_ROUTING_KEY=autoresponse.action.*
+      - NOTIFIER_RABBITMQ_APPROVAL_ROUTING_KEY=autoresponse.action.pending
+      - NOTIFIER_POSTGRES_HOST=postgres
+      - NOTIFIER_POSTGRES_PORT=5432
+      - NOTIFIER_POSTGRES_DB=${POSTGRES_DB:-devops_db}
+      - NOTIFIER_POSTGRES_USER=${POSTGRES_USER:-devops}
+      - NOTIFIER_POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devops123}
+      - NOTIFIER_NOTIFY_INCIDENTS=true
+      - NOTIFIER_NOTIFY_ANALYSIS=true
+      - NOTIFIER_NOTIFY_ACTIONS=true
+      - NOTIFIER_NOTIFY_APPROVALS=true
+      - NOTIFIER_NOTIFY_SEVERITY_LEVELS=["medium","high","critical"]
+      - NOTIFIER_GRAFANA_URL=http://grafana:3000
+      - NOTIFIER_INCLUDE_TIMESTAMPS=true
+      - NOTIFIER_INCLUDE_METADATA=true
+      - NOTIFIER_TRUNCATE_LONG_MESSAGES=true
+      - NOTIFIER_MAX_MESSAGE_LENGTH=3000
+    volumes:
+      - ./services/notifier-agent:/app
+      - notifier_logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      monitoring-agent:
+        condition: service_started
+      analyzer-agent:
+        condition: service_started
+      auto-response-agent:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Memory Agent (Python)
+  memory-agent:
+    build:
+      context: ./services/memory-agent
+      dockerfile: Dockerfile
+    container_name: devops-memory-agent
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${MEMORY_LOG_LEVEL:-INFO}
+      - MEMORY_AGENT_NAME=memory
+      - MEMORY_AGENT_VERSION=1.0.0
+      - MEMORY_POSTGRES_HOST=postgres
+      - MEMORY_POSTGRES_PORT=5432
+      - MEMORY_POSTGRES_DB=${POSTGRES_DB:-devops_db}
+      - MEMORY_POSTGRES_USER=${POSTGRES_USER:-devops}
+      - MEMORY_POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devops123}
+      - MEMORY_DB_POOL_MIN=2
+      - MEMORY_DB_POOL_MAX=10
+      - MEMORY_DB_CONNECTION_TIMEOUT=30000
+      - MEMORY_RABBITMQ_HOST=rabbitmq
+      - MEMORY_RABBITMQ_PORT=5672
+      - MEMORY_RABBITMQ_USER=${RABBITMQ_USER:-devops}
+      - MEMORY_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-devops123}
+      - MEMORY_RABBITMQ_VHOST=${RABBITMQ_VHOST:-devops}
+      - MEMORY_RABBITMQ_EXCHANGE=agent_events
+      - MEMORY_RABBITMQ_INCIDENT_ROUTING_KEY=monitoring.incident.*
+      - MEMORY_RABBITMQ_ANALYSIS_ROUTING_KEY=analyzer.analysis.complete
+      - MEMORY_RABBITMQ_ACTION_ROUTING_KEY=autoresponse.action.*
+      - MEMORY_RABBITMQ_APPROVAL_ROUTING_KEY=autoresponse.action.pending
+      - MEMORY_RABBITMQ_QUEUE_DURABLE=true
+      - MEMORY_RABBITMQ_QUEUE_AUTO_DELETE=false
+      - MEMORY_RABBITMQ_PREFETCH_COUNT=10
+      - MEMORY_QDRANT_HOST=${QDRANT_HOST}
+      - MEMORY_QDRANT_HTTP_PORT=${QDRANT_HTTP_PORT:-6333}
+      - MEMORY_QDRANT_API_KEY=${QDRANT_API_KEY}
+      - MEMORY_QDRANT_COLLECTION_NAME=incident_embeddings
+      - MEMORY_QDRANT_VECTOR_SIZE=1536
+      - MEMORY_OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MEMORY_OPENAI_MODEL=text-embedding-3-small
+      - MEMORY_OPENAI_TIMEOUT=60
+      - MEMORY_PATTERN_DETECTION_ENABLED=true
+      - MEMORY_PATTERN_SIMILARITY_THRESHOLD=0.85
+      - MEMORY_PATTERN_MIN_OCCURRENCES=3
+      - MEMORY_PATTERN_TIME_WINDOW_HOURS=168
+      - MEMORY_LEARNING_ENABLED=true
+      - MEMORY_SUCCESSFUL_RESOLUTION_THRESHOLD=0.8
+      - MEMORY_EMBEDDING_BATCH_SIZE=10
+      - MEMORY_INCIDENT_RETENTION_DAYS=90
+      - MEMORY_EMBEDDING_RETENTION_DAYS=90
+    volumes:
+      - ./services/memory-agent:/app
+      - memory_logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      monitoring-agent:
+        condition: service_started
+      analyzer-agent:
+        condition: service_started
+      auto-response-agent:
+        condition: service_started
+      notifier-agent:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Approval Backend (Node.js/Express)
+  approval-backend:
+    build:
+      context: ./services/approval-dashboard/backend
+      dockerfile: Dockerfile
+    container_name: devops-approval-backend
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${APPROVAL_BACKEND_PORT:-3000}
+      - LOG_LEVEL=${BACKEND_LOG_LEVEL:-info}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops123}@postgres:5432/${POSTGRES_DB:-devops_db}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=${RABBITMQ_USER:-devops}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-devops123}
+      - RABBITMQ_VHOST=${RABBITMQ_VHOST:-devops}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3001}
+    ports:
+      - "${APPROVAL_BACKEND_PORT:-3000}:3000"
+    volumes:
+      - ./services/approval-dashboard/backend:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Approval Frontend (React/Next.js)
+  approval-frontend:
+    build:
+      context: ./services/approval-dashboard/frontend
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=${NODE_ENV:-development}
+    container_name: devops-approval-frontend
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=80
+    ports:
+      - "3001:80"
+    depends_on:
+      - approval-backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: devops-nginx
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infrastructure/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./infrastructure/nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - approval-frontend
+      - approval-backend
+      - llm-service
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: devops-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Grafana Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: devops-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=${GRAFANA_PLUGINS:-}
+    ports:
+      - "${GRAFANA_PORT:-3002}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Test App - Chaos Engineering for Testing
+  test-app:
+    build:
+      context: ./services/test-app
+      dockerfile: Dockerfile
+    container_name: devops-test-app
+    environment:
+      - PORT=${TEST_APP_PORT:-8080}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    ports:
+      - "${TEST_APP_PORT:-8080}:8080"
+    volumes:
+      - ./services/test-app:/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8080/health', timeout=2)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Operations Dashboard Backend (WebSocket + API)
+  ops-dashboard-backend:
+    build:
+      context: ./services/ops-dashboard/backend
+      dockerfile: Dockerfile
+    container_name: devops-ops-dashboard-backend
+    ports:
+      - "8001:8001"
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=devops
+      - RABBITMQ_PASSWORD=devops123
+      - RABBITMQ_VHOST=devops
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  # Operations Dashboard Frontend (React)
+  ops-dashboard-frontend:
+    build:
+      context: ./services/ops-dashboard/frontend
+      dockerfile: Dockerfile
+    container_name: devops-ops-dashboard-frontend
+    ports:
+      - "3003:3003"
+    depends_on:
+      - ops-dashboard-backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:8001/api
+      - REACT_APP_SOCKET_URL=http://localhost:8001
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  rabbitmq_log:
+    driver: local
+  llm_models:
+    driver: local
+  worker_logs:
+    driver: local
+  monitoring_logs:
+    driver: local
+  analyzer_logs:
+    driver: local
+  autoresponse_logs:
+    driver: local
+  notifier_logs:
+    driver: local
+  memory_logs:
+    driver: local
+  nginx_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  devops-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

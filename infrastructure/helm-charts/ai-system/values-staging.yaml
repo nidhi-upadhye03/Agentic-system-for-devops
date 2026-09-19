@@ -1,0 +1,185 @@
+# Staging environment overrides
+global:
+  environment: staging
+  namespace: ai-system-staging
+  domain: staging.ai-system.com
+  imagePullPolicy: IfNotPresent
+
+llmService:
+  replicaCount: 2
+  image:
+    tag: staging
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+  env:
+    LOG_LEVEL: INFO
+    MODEL_NAME: gpt-4
+    TEMPERATURE: "0.7"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+worker:
+  replicaCount: 3
+  image:
+    tag: staging
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  env:
+    LOG_LEVEL: INFO
+    WORKER_CONCURRENCY: "8"
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
+
+approvalBackend:
+  replicaCount: 2
+  image:
+    tag: staging
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  env:
+    NODE_ENV: staging
+    LOG_LEVEL: info
+    CORS_ORIGIN: https://staging.ai-system.com
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+approvalFrontend:
+  replicaCount: 2
+  image:
+    tag: staging
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  env:
+    REACT_APP_ENV: staging
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+rabbitmq:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  persistence:
+    enabled: true
+    size: 20Gi
+  auth:
+    username: admin
+    password: staging-secure-password
+
+postgresql:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  persistence:
+    enabled: true
+    size: 50Gi
+  auth:
+    password: staging-secure-password
+
+redis:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  persistence:
+    enabled: true
+    size: 10Gi
+  auth:
+    password: staging-secure-password
+  env:
+    REDIS_MAXMEMORY: 512mb
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: staging.ai-system.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: approval-backend
+          port: 3000
+        - path: /llm
+          pathType: Prefix
+          service: llm-service
+          port: 8000
+        - path: /
+          pathType: Prefix
+          service: approval-frontend
+          port: 80
+  tls:
+    - secretName: ai-system-staging-tls
+      hosts:
+        - staging.ai-system.com
+
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+rbac:
+  enabled: true
+
+secrets:
+  data:
+    # These should be provided via sealed secrets or external secrets operator
+    DATABASE_URL: ""
+    REDIS_URL: ""
+    RABBITMQ_URL: ""
+    JWT_SECRET: ""
+    OPENAI_API_KEY: ""

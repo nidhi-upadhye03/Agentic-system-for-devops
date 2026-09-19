@@ -1,0 +1,116 @@
+{{- if .Values.rabbitmq.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "ai-system.fullname" . }}-rabbitmq
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.rabbitmq.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "ai-system.fullname" . }}-rabbitmq
+  replicas: {{ .Values.rabbitmq.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ai-system.rabbitmq.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "ai-system.rabbitmq.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "ai-system.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "ai-system.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: rabbitmq
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+        image: {{ include "ai-system.image" (dict "repository" .Values.rabbitmq.image.repository "tag" .Values.rabbitmq.image.tag "root" .) }}
+        imagePullPolicy: {{ .Values.rabbitmq.image.pullPolicy | default .Values.global.imagePullPolicy }}
+        ports:
+        - name: amqp
+          containerPort: {{ .Values.rabbitmq.service.ports.amqp }}
+          protocol: TCP
+        - name: management
+          containerPort: {{ .Values.rabbitmq.service.ports.management }}
+          protocol: TCP
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "ai-system.fullname" . }}-secrets
+              key: RABBITMQ_DEFAULT_USER
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "ai-system.fullname" . }}-secrets
+              key: RABBITMQ_DEFAULT_PASS
+        - name: RABBITMQ_ERLANG_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "ai-system.fullname" . }}-secrets
+              key: RABBITMQ_ERLANG_COOKIE
+        {{- range $key, $value := .Values.rabbitmq.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- with .Values.rabbitmq.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.rabbitmq.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.rabbitmq.resources | nindent 10 }}
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/rabbitmq
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.rabbitmq.persistence.enabled }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        {{- include "ai-system.rabbitmq.labels" . | nindent 8 }}
+    spec:
+      accessModes:
+        - {{ .Values.rabbitmq.persistence.accessMode }}
+      {{- if .Values.rabbitmq.persistence.storageClass }}
+      storageClassName: {{ .Values.rabbitmq.persistence.storageClass }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.rabbitmq.persistence.size }}
+  {{- else }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+  {{- end }}
+{{- end }}

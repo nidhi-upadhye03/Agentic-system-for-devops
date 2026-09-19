@@ -1,0 +1,185 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-service
+  namespace: ai-system
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+      - name: llm-service
+        resources:
+          requests:
+            memory: "3Gi"
+            cpu: "1500m"
+          limits:
+            memory: "6Gi"
+            cpu: "3000m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-service
+  namespace: ai-system
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+      - name: worker
+        resources:
+          requests:
+            memory: "768Mi"
+            cpu: "750m"
+          limits:
+            memory: "3Gi"
+            cpu: "2000m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: approval-backend
+  namespace: ai-system
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+      - name: backend
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: approval-frontend
+  namespace: ai-system
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: nginx
+        resources:
+          requests:
+            memory: "192Mi"
+            cpu: "150m"
+          limits:
+            memory: "384Mi"
+            cpu: "750m"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: ai-system
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: rabbitmq
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "3Gi"
+            cpu: "1500m"
+  volumeClaimTemplates:
+  - metadata:
+      name: rabbitmq-data
+    spec:
+      resources:
+        requests:
+          storage: 20Gi
+      storageClassName: premium-ssd
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: ai-system
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: postgres
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      resources:
+        requests:
+          storage: 50Gi
+      storageClassName: premium-ssd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: ai-system
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: redis
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "750m"
+---
+# Update HPA settings for production
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: llm-service-hpa
+  namespace: ai-system
+spec:
+  minReplicas: 5
+  maxReplicas: 20
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker-service-hpa
+  namespace: ai-system
+spec:
+  minReplicas: 5
+  maxReplicas: 30
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: approval-backend-hpa
+  namespace: ai-system
+spec:
+  minReplicas: 5
+  maxReplicas: 15
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: approval-frontend-hpa
+  namespace: ai-system
+spec:
+  minReplicas: 3
+  maxReplicas: 12

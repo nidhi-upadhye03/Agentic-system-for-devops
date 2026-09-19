@@ -1,0 +1,472 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Production tag to deploy (e.g., v1.2.3)'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip integration tests (use with caution)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  ENVIRONMENT: production
+  CLUSTER_NAME: prod-cluster
+  NAMESPACE: production
+
+jobs:
+  validate:
+    name: Validate Production Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      approved: ${{ steps.approval.outputs.approved }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION=${{ inputs.tag }}
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Deploying version: $VERSION"
+
+      - name: Validate version format
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format: $VERSION"
+            echo "Expected format: v1.2.3"
+            exit 1
+          fi
+
+      - name: Verify images exist in registry
+        run: |
+          for service in api web worker; do
+            echo "Checking image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${service}:${{ steps.version.outputs.version }}"
+            docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${service}:${{ steps.version.outputs.version }} || exit 1
+          done
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
+
+      - name: Check if version already deployed
+        run: |
+          echo "Checking if version is already deployed to production..."
+          # Add logic to check deployment history
+
+      - name: Security scan on production images
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-api:${{ steps.version.outputs.version }}
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+  approval:
+    name: Manual Approval Required
+    runs-on: ubuntu-latest
+    needs: validate
+    environment:
+      name: production-approval
+    steps:
+      - name: Request approval
+        run: |
+          echo "Deployment approval requested for version ${{ needs.validate.outputs.version }}"
+          echo "This deployment requires manual approval from authorized personnel."
+
+      - name: Send approval request notification
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Production deployment approval required",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":warning: *Production Deployment Approval Required*\n*Repository:* ${{ github.repository }}\n*Version:* ${{ needs.validate.outputs.version }}\n*Requested by:* ${{ github.actor }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "Review Deployment"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [validate, approval]
+    environment:
+      name: production
+      url: https://example.com
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_PROD_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
+          kubectl config set-context --current --namespace=${{ env.NAMESPACE }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Verify cluster connectivity
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Create namespace if not exists
+        run: kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create production secrets
+        run: |
+          kubectl create secret generic app-secrets \
+            --from-literal=database-url=${{ secrets.PROD_DATABASE_URL }} \
+            --from-literal=redis-url=${{ secrets.PROD_REDIS_URL }} \
+            --from-literal=api-key=${{ secrets.PROD_API_KEY }} \
+            --from-literal=jwt-secret=${{ secrets.PROD_JWT_SECRET }} \
+            --namespace=${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create image pull secret
+        run: |
+          kubectl create secret docker-registry regcred \
+            --docker-server=${{ env.REGISTRY }} \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --namespace=${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Backup current production state
+        run: |
+          BACKUP_DIR="backups/$(date +%Y%m%d-%H%M%S)"
+          mkdir -p $BACKUP_DIR
+          kubectl get all -n ${{ env.NAMESPACE }} -o yaml > $BACKUP_DIR/all-resources.yaml
+          kubectl get configmaps -n ${{ env.NAMESPACE }} -o yaml > $BACKUP_DIR/configmaps.yaml
+          kubectl get secrets -n ${{ env.NAMESPACE }} -o yaml > $BACKUP_DIR/secrets.yaml
+          echo "Backup completed in $BACKUP_DIR"
+
+      - name: Enable maintenance mode
+        run: |
+          kubectl apply -f ./k8s/maintenance-mode.yaml -n ${{ env.NAMESPACE }} || echo "No maintenance mode configured"
+        continue-on-error: true
+
+      - name: Deploy API service with canary strategy
+        run: |
+          helm upgrade --install api ./helm/api \
+            --namespace ${{ env.NAMESPACE }} \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-api \
+            --set image.tag=${{ needs.validate.outputs.version }} \
+            --set replicaCount=5 \
+            --set environment=production \
+            --set resources.requests.cpu=1000m \
+            --set resources.requests.memory=1Gi \
+            --set resources.limits.cpu=2000m \
+            --set resources.limits.memory=2Gi \
+            --set autoscaling.enabled=true \
+            --set autoscaling.minReplicas=5 \
+            --set autoscaling.maxReplicas=20 \
+            --set autoscaling.targetCPUUtilizationPercentage=70 \
+            --set autoscaling.targetMemoryUtilizationPercentage=80 \
+            --set podDisruptionBudget.enabled=true \
+            --set podDisruptionBudget.minAvailable=3 \
+            --set strategy.type=RollingUpdate \
+            --set strategy.rollingUpdate.maxSurge=1 \
+            --set strategy.rollingUpdate.maxUnavailable=0 \
+            --wait --timeout=15m
+
+      - name: Monitor API deployment health
+        run: |
+          sleep 30
+          bash ./scripts/health-check.sh production api
+        timeout-minutes: 5
+
+      - name: Deploy Web service with rolling update
+        run: |
+          helm upgrade --install web ./helm/web \
+            --namespace ${{ env.NAMESPACE }} \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-web \
+            --set image.tag=${{ needs.validate.outputs.version }} \
+            --set replicaCount=5 \
+            --set environment=production \
+            --set resources.requests.cpu=500m \
+            --set resources.requests.memory=512Mi \
+            --set resources.limits.cpu=1000m \
+            --set resources.limits.memory=1Gi \
+            --set autoscaling.enabled=true \
+            --set autoscaling.minReplicas=5 \
+            --set autoscaling.maxReplicas=15 \
+            --set podDisruptionBudget.enabled=true \
+            --set podDisruptionBudget.minAvailable=3 \
+            --set strategy.type=RollingUpdate \
+            --set strategy.rollingUpdate.maxSurge=1 \
+            --set strategy.rollingUpdate.maxUnavailable=0 \
+            --wait --timeout=15m
+
+      - name: Monitor Web deployment health
+        run: |
+          sleep 30
+          bash ./scripts/health-check.sh production web
+        timeout-minutes: 5
+
+      - name: Deploy Worker service
+        run: |
+          helm upgrade --install worker ./helm/worker \
+            --namespace ${{ env.NAMESPACE }} \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-worker \
+            --set image.tag=${{ needs.validate.outputs.version }} \
+            --set replicaCount=3 \
+            --set environment=production \
+            --set resources.requests.cpu=1000m \
+            --set resources.requests.memory=1Gi \
+            --set resources.limits.cpu=2000m \
+            --set resources.limits.memory=2Gi \
+            --set autoscaling.enabled=true \
+            --set autoscaling.minReplicas=3 \
+            --set autoscaling.maxReplicas=10 \
+            --wait --timeout=15m
+
+      - name: Wait for all rollouts to complete
+        run: |
+          kubectl rollout status deployment/api -n ${{ env.NAMESPACE }} --timeout=15m
+          kubectl rollout status deployment/web -n ${{ env.NAMESPACE }} --timeout=15m
+          kubectl rollout status deployment/worker -n ${{ env.NAMESPACE }} --timeout=15m
+
+      - name: Disable maintenance mode
+        run: |
+          kubectl delete -f ./k8s/maintenance-mode.yaml -n ${{ env.NAMESPACE }} || echo "No maintenance mode to disable"
+        continue-on-error: true
+
+      - name: Run comprehensive health checks
+        run: bash ./scripts/health-check.sh ${{ env.ENVIRONMENT }}
+        timeout-minutes: 10
+
+      - name: Run smoke tests
+        if: ${{ !inputs.skip_tests }}
+        run: |
+          npm ci
+          npm run test:smoke -- --env=production
+        env:
+          API_URL: https://api.example.com
+          WEB_URL: https://example.com
+        timeout-minutes: 10
+
+      - name: Run critical path tests
+        if: ${{ !inputs.skip_tests }}
+        run: |
+          npm run test:critical -- --env=production
+        env:
+          API_URL: https://api.example.com
+        timeout-minutes: 15
+
+      - name: Monitor error rates
+        run: |
+          echo "Monitoring error rates for 5 minutes..."
+          # Add monitoring logic here
+          sleep 300
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "CRITICAL: Production deployment failed, initiating rollback..."
+          bash ./scripts/rollback.sh ${{ env.ENVIRONMENT }}
+
+      - name: Update deployment metadata
+        if: success()
+        run: |
+          kubectl annotate deployment/api \
+            kubernetes.io/change-cause="Deployed ${{ needs.validate.outputs.version }} by ${{ github.actor }}" \
+            deployment.kubernetes.io/revision="${{ github.run_number }}" \
+            app.kubernetes.io/version="${{ needs.validate.outputs.version }}" \
+            -n ${{ env.NAMESPACE }} --overwrite
+
+          kubectl annotate deployment/web \
+            kubernetes.io/change-cause="Deployed ${{ needs.validate.outputs.version }} by ${{ github.actor }}" \
+            deployment.kubernetes.io/revision="${{ github.run_number }}" \
+            app.kubernetes.io/version="${{ needs.validate.outputs.version }}" \
+            -n ${{ env.NAMESPACE }} --overwrite
+
+          kubectl annotate deployment/worker \
+            kubernetes.io/change-cause="Deployed ${{ needs.validate.outputs.version }} by ${{ github.actor }}" \
+            deployment.kubernetes.io/revision="${{ github.run_number }}" \
+            app.kubernetes.io/version="${{ needs.validate.outputs.version }}" \
+            -n ${{ env.NAMESPACE }} --overwrite
+
+      - name: Create production deployment record
+        if: success()
+        run: |
+          kubectl create configmap prod-deployment-${{ github.run_number }} \
+            --from-literal=version=${{ needs.validate.outputs.version }} \
+            --from-literal=timestamp=$(date -Iseconds) \
+            --from-literal=actor=${{ github.actor }} \
+            --from-literal=run-id=${{ github.run_id }} \
+            --from-literal=approved-by="${{ github.actor }}" \
+            --namespace=${{ env.NAMESPACE }}
+
+      - name: Create GitHub release
+        if: success() && github.event_name == 'push'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.validate.outputs.version }}
+          release_name: Release ${{ needs.validate.outputs.version }}
+          body: |
+            Production deployment completed successfully.
+
+            **Deployed Services:**
+            - API: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-api:${{ needs.validate.outputs.version }}
+            - Web: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-web:${{ needs.validate.outputs.version }}
+            - Worker: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-worker:${{ needs.validate.outputs.version }}
+
+            **Deployment Details:**
+            - Environment: Production
+            - Deployed by: ${{ github.actor }}
+            - Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          draft: false
+          prerelease: false
+
+      - name: Send success notification
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Production deployment successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":white_check_mark: *Production Deployment Successful*\n*Repository:* ${{ github.repository }}\n*Version:* ${{ needs.validate.outputs.version }}\n*Environment:* Production\n*Deployed by:* ${{ github.actor }}\n*URL:* https://example.com"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "All services are healthy and operational"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      - name: Send failure notification
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "CRITICAL: Production deployment failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":rotating_light: *CRITICAL: Production Deployment Failed*\n*Repository:* ${{ github.repository }}\n*Version:* ${{ needs.validate.outputs.version }}\n*Environment:* Production\n*Attempted by:* ${{ github.actor }}\n\n*Action Required:* Immediate investigation needed"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Logs"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                      "style": "danger"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  post-deployment:
+    name: Post-Deployment Tasks
+    runs-on: ubuntu-latest
+    needs: [validate, deploy]
+    if: success()
+    steps:
+      - name: Warm up caches
+        run: |
+          echo "Warming up application caches..."
+          curl -s https://example.com/health > /dev/null
+          curl -s https://api.example.com/health > /dev/null
+
+      - name: Update monitoring dashboards
+        run: |
+          echo "Updating monitoring dashboards with new version..."
+          # Add logic to update dashboards
+
+      - name: Create incident.io status page update
+        run: |
+          echo "Updating status page..."
+          # Add status page update logic
+
+      - name: Notify stakeholders
+        run: |
+          echo "Notifying stakeholders of successful deployment..."
+          # Add stakeholder notification logic

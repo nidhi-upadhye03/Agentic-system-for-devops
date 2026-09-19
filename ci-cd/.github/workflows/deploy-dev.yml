@@ -1,0 +1,172 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  ENVIRONMENT: dev
+  CLUSTER_NAME: dev-cluster
+  NAMESPACE: development
+
+jobs:
+  deploy:
+    name: Deploy to Dev Environment
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: https://dev.example.com
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
+          kubectl config set-context --current --namespace=${{ env.NAMESPACE }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Add Helm repositories
+        run: |
+          helm repo add stable https://charts.helm.sh/stable
+          helm repo update
+
+      - name: Create namespace if not exists
+        run: kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create image pull secret
+        run: |
+          kubectl create secret docker-registry regcred \
+            --docker-server=${{ env.REGISTRY }} \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --namespace=${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy API service
+        run: |
+          bash ./scripts/deploy.sh api ${{ env.ENVIRONMENT }} ${{ github.sha }}
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          REPLICAS: 2
+
+      - name: Deploy Web service
+        run: |
+          bash ./scripts/deploy.sh web ${{ env.ENVIRONMENT }} ${{ github.sha }}
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          REPLICAS: 2
+
+      - name: Deploy Worker service
+        run: |
+          bash ./scripts/deploy.sh worker ${{ env.ENVIRONMENT }} ${{ github.sha }}
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          REPLICAS: 1
+
+      - name: Wait for rollout to complete
+        run: |
+          kubectl rollout status deployment/api -n ${{ env.NAMESPACE }} --timeout=5m
+          kubectl rollout status deployment/web -n ${{ env.NAMESPACE }} --timeout=5m
+          kubectl rollout status deployment/worker -n ${{ env.NAMESPACE }} --timeout=5m
+
+      - name: Run health checks
+        run: bash ./scripts/health-check.sh ${{ env.ENVIRONMENT }}
+        timeout-minutes: 5
+
+      - name: Run smoke tests
+        run: |
+          npm ci
+          npm run test:smoke -- --env=dev
+        env:
+          API_URL: https://api-dev.example.com
+          WEB_URL: https://dev.example.com
+
+      - name: Rollback on failure
+        if: failure()
+        run: bash ./scripts/rollback.sh ${{ env.ENVIRONMENT }}
+
+      - name: Update deployment status
+        run: |
+          kubectl annotate deployment/api \
+            kubernetes.io/change-cause="Deployed ${{ github.sha }} by ${{ github.actor }}" \
+            -n ${{ env.NAMESPACE }} --overwrite
+
+      - name: Send success notification
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Deployment to Dev successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":rocket: *Deployment to Development Successful*\n*Repository:* ${{ github.repository }}\n*Environment:* Development\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}\n*URL:* https://dev.example.com"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      - name: Send failure notification
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Deployment to Dev failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":x: *Deployment to Development Failed*\n*Repository:* ${{ github.repository }}\n*Environment:* Development\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Logs"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.9.2
+    container_name: qdrant-vector-store
+    restart: unless-stopped
+
+    ports:
+      # HTTP API
+      - "6333:6333"
+      # gRPC API
+      - "6334:6334"
+      # Web UI (dashboard)
+      - "6335:6333"
+
+    volumes:
+      # Persistent storage for vector data
+      - ./data/storage:/qdrant/storage
+      # Snapshots backup location
+      - ./data/snapshots:/qdrant/snapshots
+      # Custom configuration
+      - ./config/qdrant-config.yaml:/qdrant/config/production.yaml
+
+    environment:
+      # Configuration file location
+      - QDRANT__CONFIG=/qdrant/config/production.yaml
+
+      # Optional: API key authentication (uncomment to enable)
+      # - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
+
+      # Optional: Read-only API key
+      # - QDRANT__SERVICE__READ_ONLY_API_KEY=${QDRANT_READ_ONLY_API_KEY}
+
+      # Log level: DEBUG, INFO, WARN, ERROR
+      - QDRANT__LOG_LEVEL=${QDRANT_LOG_LEVEL:-INFO}
+
+      # Telemetry (set to true to disable)
+      - QDRANT__TELEMETRY_DISABLED=${QDRANT_TELEMETRY_DISABLED:-false}
+
+    networks:
+      - vector-store-network
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  # Optional: Backup service for automated snapshots
+  qdrant-backup:
+    image: alpine:latest
+    container_name: qdrant-backup
+    restart: unless-stopped
+
+    volumes:
+      - ./data/snapshots:/snapshots
+      - ./backups:/backups
+      - ./scripts:/scripts:ro
+
+    environment:
+      - BACKUP_INTERVAL=${BACKUP_INTERVAL:-86400}  # Daily by default
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+
+    command: >
+      sh -c "
+      while true; do
+        echo 'Creating backup...'
+        timestamp=$$(date +%Y%m%d_%H%M%S)
+        tar -czf /backups/qdrant_backup_$$timestamp.tar.gz -C /snapshots .
+        echo 'Backup created: qdrant_backup_$$timestamp.tar.gz'
+
+        echo 'Cleaning old backups...'
+        find /backups -name 'qdrant_backup_*.tar.gz' -mtime +$$BACKUP_RETENTION_DAYS -delete
+
+        echo 'Next backup in $$BACKUP_INTERVAL seconds'
+        sleep $$BACKUP_INTERVAL
+      done
+      "
+
+    networks:
+      - vector-store-network
+
+    depends_on:
+      - qdrant
+
+networks:
+  vector-store-network:
+    driver: bridge
+
+volumes:
+  # Named volumes (alternative to bind mounts)
+  qdrant-storage:
+    driver: local
+  qdrant-snapshots:
+    driver: local

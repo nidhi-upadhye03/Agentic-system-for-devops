@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: monitoring
+data:
+  datasources.yaml: |
+    apiVersion: 1
+
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus:9090
+      isDefault: true
+      editable: false
+      jsonData:
+        timeInterval: 15s
+        queryTimeout: 60s
+        httpMethod: POST
+        manageAlerts: true
+        prometheusType: Prometheus
+        prometheusVersion: 2.48.0
+        cacheLevel: 'High'
+        incrementalQuerying: true
+        disableRecordingRules: false
+      version: 1
+
+    - name: Elasticsearch
+      type: elasticsearch
+      access: proxy
+      url: http://elasticsearch:9200
+      database: "[logstash-]YYYY.MM.DD"
+      editable: false
+      jsonData:
+        timeField: "@timestamp"
+        esVersion: "8.11.0"
+        logMessageField: "message"
+        logLevelField: "level"
+        maxConcurrentShardRequests: 5
+        interval: Daily
+      version: 1

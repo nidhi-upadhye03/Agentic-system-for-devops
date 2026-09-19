@@ -1,0 +1,19 @@
+apiVersion: v2
+name: ai-system
+description: A Helm chart for AI System with LLM, Worker, and Approval services
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - ai
+  - llm
+  - approval
+  - microservices
+home: https://github.com/your-org/ai-system
+sources:
+  - https://github.com/your-org/ai-system
+maintainers:
+  - name: DevOps Team
+    email: devops@example.com
+icon: https://example.com/icon.png
+dependencies: []

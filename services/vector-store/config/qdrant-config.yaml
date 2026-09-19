@@ -1,0 +1,95 @@
+# Qdrant Configuration for Self-Hosted Deployment
+# https://qdrant.tech/documentation/guides/configuration/
+
+service:
+  # Host to bind the service
+  host: 0.0.0.0
+  # HTTP port
+  http_port: 6333
+  # gRPC port
+  grpc_port: 6334
+
+  # Enable CORS for web clients
+  enable_cors: true
+
+  # Maximum request size (in MB)
+  max_request_size_mb: 32
+
+storage:
+  # Storage backend type: on-disk, in-memory
+  storage_path: ./storage
+
+  # Snapshot configuration
+  snapshots_path: ./snapshots
+
+  # Enable Write-Ahead Log
+  wal_enabled: true
+
+  # Performance optimization
+  # Number of parallel workers for indexing
+  optimizers:
+    # Number of parallel indexing operations
+    indexing_threshold: 20000
+
+    # Flush interval in seconds
+    flush_interval_sec: 5
+
+    # Max segment size in KB
+    max_segment_size_kb: 200000
+
+# Collection configuration defaults
+collection:
+  # Default vector size (can be overridden per collection)
+  # This is just a template, actual collections define their own sizes
+
+  # Replication factor for high availability
+  replication_factor: 1
+
+  # Write consistency
+  write_consistency_factor: 1
+
+# Cluster configuration (for distributed deployment)
+cluster:
+  enabled: false
+  # Uncomment for cluster mode
+  # p2p:
+  #   port: 6335
+  # consensus:
+  #   tick_period_ms: 100
+
+# Security configuration
+# Uncomment to enable API key authentication
+# security:
+#   api_key: ${QDRANT_API_KEY}
+#   read_only_api_key: ${QDRANT_READ_ONLY_API_KEY}
+
+# TLS configuration
+# tls:
+#   enabled: true
+#   cert: /path/to/cert.pem
+#   key: /path/to/key.pem
+
+# Logging configuration
+log_level: INFO
+
+# Telemetry (set to false to disable)
+telemetry_disabled: false
+
+# Resource limits
+limits:
+  # Maximum number of collections
+  max_collections: 100
+
+  # Maximum payload size in bytes
+  max_payload_size_bytes: 10485760  # 10MB
+
+# Quantization settings (for memory optimization)
+# quantization:
+#   scalar:
+#     type: int8
+#     always_ram: false
+
+# Performance tuning
+performance:
+  # Maximum search threads
+  max_search_threads: 0  # 0 = auto-detect based on CPU cores

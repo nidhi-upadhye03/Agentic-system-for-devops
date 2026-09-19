@@ -1,0 +1,36 @@
+{{- if .Values.configMap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-system.fullname" . }}-config
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.configMap.data }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+
+  # Service endpoints
+  LLM_SERVICE_URL: "http://{{ include "ai-system.fullname" . }}-llm-service:{{ .Values.llmService.service.port }}"
+  APPROVAL_BACKEND_URL: "http://{{ include "ai-system.fullname" . }}-approval-backend:{{ .Values.approvalBackend.service.port }}"
+  APPROVAL_FRONTEND_URL: "http://{{ include "ai-system.fullname" . }}-approval-frontend:{{ .Values.approvalFrontend.service.port }}"
+
+  # Database endpoints
+  POSTGRES_HOST: "{{ include "ai-system.fullname" . }}-postgres"
+  POSTGRES_PORT: "{{ .Values.postgresql.service.port }}"
+  POSTGRES_DB: "{{ .Values.postgresql.auth.database }}"
+
+  # Redis endpoint
+  REDIS_HOST: "{{ include "ai-system.fullname" . }}-redis"
+  REDIS_PORT: "{{ .Values.redis.service.port }}"
+
+  # RabbitMQ endpoints
+  RABBITMQ_HOST: "{{ include "ai-system.fullname" . }}-rabbitmq"
+  RABBITMQ_PORT: "{{ .Values.rabbitmq.service.ports.amqp }}"
+  RABBITMQ_MANAGEMENT_PORT: "{{ .Values.rabbitmq.service.ports.management }}"
+
+  # Environment
+  ENVIRONMENT: "{{ .Values.global.environment }}"
+  DOMAIN: "{{ .Values.global.domain }}"
+{{- end }}

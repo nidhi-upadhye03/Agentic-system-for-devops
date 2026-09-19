@@ -1,0 +1,424 @@
+{
+  "incident_templates": [
+    {
+      "id": "template-001",
+      "title": "High Memory Usage - OOM Risk",
+      "description": "Service experiencing high memory consumption approaching container limits. Risk of OOM killer termination.",
+      "category": "resource_exhaustion",
+      "severity": "high",
+      "affected_service": "example-service",
+      "metrics": {
+        "memory_usage_mb": 950,
+        "memory_limit_mb": 1024,
+        "usage_percentage": 92.7
+      },
+      "root_cause": "Memory leak in application code or insufficient memory allocation for workload",
+      "recommendations": [
+        {
+          "action": "restart_pods",
+          "reasoning": "Restart to clear memory leak temporarily",
+          "criticality": "high",
+          "estimated_downtime": "30 seconds"
+        },
+        {
+          "action": "scale_deployment",
+          "reasoning": "Increase memory limits to prevent OOM",
+          "parameters": {"memory": "2048Mi"},
+          "criticality": "medium"
+        },
+        {
+          "action": "investigate",
+          "reasoning": "Profile application for memory leaks",
+          "criticality": "high"
+        }
+      ],
+      "tags": ["memory", "oom", "resource", "performance"]
+    },
+    {
+      "id": "template-002",
+      "title": "High CPU Usage - Throttling",
+      "description": "CPU utilization exceeding 80% causing performance degradation and request throttling.",
+      "category": "performance_degradation",
+      "severity": "high",
+      "affected_service": "api-gateway",
+      "metrics": {
+        "cpu_usage_percent": 87.5,
+        "cpu_limit_millicores": 1000,
+        "throttling_events": 15
+      },
+      "root_cause": "Inefficient algorithm, infinite loop, or insufficient CPU allocation",
+      "recommendations": [
+        {
+          "action": "scale_deployment",
+          "reasoning": "Increase replicas to distribute load",
+          "parameters": {"replicas": 5},
+          "criticality": "high"
+        },
+        {
+          "action": "increase_cpu_limit",
+          "reasoning": "Allocate more CPU resources",
+          "parameters": {"cpu": "2000m"},
+          "criticality": "medium"
+        },
+        {
+          "action": "investigate",
+          "reasoning": "Profile CPU-intensive code paths",
+          "criticality": "medium"
+        }
+      ],
+      "tags": ["cpu", "performance", "throttling", "scaling"]
+    },
+    {
+      "id": "template-003",
+      "title": "Pod CrashLoopBackOff",
+      "description": "Pod repeatedly crashing and restarting. Container exit code indicates application failure.",
+      "category": "application_failure",
+      "severity": "critical",
+      "affected_service": "payment-service",
+      "metrics": {
+        "restart_count": 12,
+        "exit_code": 1,
+        "uptime_seconds": 15
+      },
+      "root_cause": "Application startup failure: missing configuration, database connection failure, or code bug",
+      "recommendations": [
+        {
+          "action": "check_logs",
+          "reasoning": "Examine logs for startup errors",
+          "criticality": "critical"
+        },
+        {
+          "action": "check_config",
+          "reasoning": "Verify ConfigMaps and Secrets are mounted correctly",
+          "criticality": "critical"
+        },
+        {
+          "action": "rollback_deployment",
+          "reasoning": "Rollback to previous stable version",
+          "criticality": "high"
+        },
+        {
+          "action": "investigate",
+          "reasoning": "Debug application startup sequence",
+          "criticality": "critical"
+        }
+      ],
+      "tags": ["crash", "restart", "availability", "critical"]
+    },
+    {
+      "id": "template-004",
+      "title": "High Error Rate - 5xx Responses",
+      "description": "Service returning elevated number of 5xx errors indicating internal failures.",
+      "category": "application_error",
+      "severity": "critical",
+      "affected_service": "checkout-api",
+      "metrics": {
+        "error_rate_percent": 25.3,
+        "total_requests": 10000,
+        "error_count": 2530,
+        "error_types": ["500", "502", "503"]
+      },
+      "root_cause": "Backend service failure, database connection issues, or unhandled exceptions",
+      "recommendations": [
+        {
+          "action": "check_dependencies",
+          "reasoning": "Verify all dependent services are healthy",
+          "criticality": "critical"
+        },
+        {
+          "action": "restart_pods",
+          "reasoning": "Restart to clear transient errors",
+          "criticality": "high"
+        },
+        {
+          "action": "check_database",
+          "reasoning": "Verify database connection and query performance",
+          "criticality": "high"
+        },
+        {
+          "action": "investigate",
+          "reasoning": "Analyze error logs and stack traces",
+          "criticality": "critical"
+        }
+      ],
+      "tags": ["errors", "5xx", "availability", "reliability"]
+    },
+    {
+      "id": "template-005",
+      "title": "High Response Latency - P95 Degradation",
+      "description": "API response times increased significantly. P95 latency exceeding SLO threshold.",
+      "category": "performance_degradation",
+      "severity": "high",
+      "affected_service": "user-api",
+      "metrics": {
+        "p50_latency_ms": 120,
+        "p95_latency_ms": 1850,
+        "p99_latency_ms": 3200,
+        "slo_threshold_ms": 1000
+      },
+      "root_cause": "Slow database queries, external API delays, or resource contention",
+      "recommendations": [
+        {
+          "action": "check_database_performance",
+          "reasoning": "Identify slow queries and optimize indexes",
+          "criticality": "high"
+        },
+        {
+          "action": "enable_caching",
+          "reasoning": "Cache frequently accessed data",
+          "criticality": "medium"
+        },
+        {
+          "action": "scale_deployment",
+          "reasoning": "Add more replicas to handle load",
+          "parameters": {"replicas": 5},
+          "criticality": "medium"
+        },
+        {
+          "action": "investigate",
+          "reasoning": "Profile slow requests and identify bottlenecks",
+          "criticality": "high"
+        }
+      ],
+      "tags": ["latency", "performance", "slo", "response-time"]
+    },
+    {
+      "id": "template-006",
+      "title": "Disk Space Exhaustion - 90% Full",
+      "description": "Node disk usage approaching capacity. Risk of service disruption and pod eviction.",
+      "category": "resource_exhaustion",
+      "severity": "critical",
+      "affected_service": "logging-aggregator",
+      "metrics": {
+        "disk_usage_gb": 180,
+        "disk_capacity_gb": 200,
+        "usage_percentage": 90,
+        "growth_rate_gb_per_day": 10
+      },
+      "root_cause": "Log accumulation, unrotated logs, or large temporary files",
+      "recommendations": [
+        {
+          "action": "cleanup_logs",
+          "reasoning": "Remove old log files immediately",
+          "criticality": "critical"
+        },
+        {
+          "action": "enable_log_rotation",
+          "reasoning": "Configure automated log rotation",
+          "criticality": "high"
+        },
+        {
+          "action": "increase_disk_size",
+          "reasoning": "Expand volume size to prevent future issues",
+          "criticality": "medium"
+        },
+        {
+          "action": "investigate",
+          "reasoning": "Identify source of disk space consumption",
+          "criticality": "high"
+        }
+      ],
+      "tags": ["disk", "storage", "capacity", "resource"]
+    },
+    {
+      "id": "template-007",
+      "title": "Pod Eviction - Resource Pressure",
+      "description": "Kubernetes evicting pods due to node resource pressure (memory or disk).",
+      "category": "infrastructure_issue",
+      "severity": "high",
+      "affected_service": "worker-service",
+      "metrics": {
+        "evicted_pods": 3,
+        "eviction_reason": "MemoryPressure",
+        "node_memory_usage": 95
+      },
+      "root_cause": "Node overcommitment or insufficient node capacity",
+      "recommendations": [
+        {
+          "action": "add_nodes",
+          "reasoning": "Increase cluster capacity",
+          "criticality": "high"
+        },
+        {
+          "action": "adjust_resource_requests",
+          "reasoning": "Right-size pod resource requests",
+          "criticality": "medium"
+        },
+        {
+          "action": "enable_cluster_autoscaler",
+          "reasoning": "Auto-scale cluster based on demand",
+          "criticality": "medium"
+        }
+      ],
+      "tags": ["eviction", "node", "capacity", "scheduling"]
+    },
+    {
+      "id": "template-008",
+      "title": "Network Latency Spike - Timeout Errors",
+      "description": "Network communication between services experiencing high latency and timeouts.",
+      "category": "network_issue",
+      "severity": "high",
+      "affected_service": "microservices-mesh",
+      "metrics": {
+        "network_latency_ms": 500,
+        "timeout_errors": 45,
+        "packet_loss_percent": 2.5
+      },
+      "root_cause": "Network congestion, CNI issues, or misconfigured service mesh",
+      "recommendations": [
+        {
+          "action": "check_network_policies",
+          "reasoning": "Verify network policies are not blocking traffic",
+          "criticality": "high"
+        },
+        {
+          "action": "restart_network_pods",
+          "reasoning": "Restart CNI and service mesh components",
+          "criticality": "medium"
+        },
+        {
+          "action": "investigate",
+          "reasoning": "Trace network path and identify bottlenecks",
+          "criticality": "high"
+        }
+      ],
+      "tags": ["network", "latency", "timeout", "connectivity"]
+    },
+    {
+      "id": "template-009",
+      "title": "Database Connection Pool Exhausted",
+      "description": "Application unable to acquire database connections. Connection pool at maximum capacity.",
+      "category": "application_error",
+      "severity": "critical",
+      "affected_service": "backend-api",
+      "metrics": {
+        "active_connections": 100,
+        "max_connections": 100,
+        "connection_wait_time_ms": 5000,
+        "connection_timeouts": 150
+      },
+      "root_cause": "Connection leaks, insufficient pool size, or slow queries holding connections",
+      "recommendations": [
+        {
+          "action": "increase_connection_pool",
+          "reasoning": "Increase max connections in pool",
+          "parameters": {"max_connections": 200},
+          "criticality": "high"
+        },
+        {
+          "action": "restart_pods",
+          "reasoning": "Release leaked connections",
+          "criticality": "high"
+        },
+        {
+          "action": "check_slow_queries",
+          "reasoning": "Identify queries holding connections too long",
+          "criticality": "high"
+        },
+        {
+          "action": "investigate",
+          "reasoning": "Audit code for connection leak patterns",
+          "criticality": "critical"
+        }
+      ],
+      "tags": ["database", "connections", "pool", "resource"]
+    },
+    {
+      "id": "template-010",
+      "title": "Certificate Expiration Warning - 7 Days",
+      "description": "TLS certificate expiring soon. Risk of service disruption if not renewed.",
+      "category": "security_issue",
+      "severity": "high",
+      "affected_service": "ingress-controller",
+      "metrics": {
+        "days_until_expiry": 7,
+        "certificate_domain": "api.example.com",
+        "issuer": "Let's Encrypt"
+      },
+      "root_cause": "Expired certificate or cert-manager renewal failure",
+      "recommendations": [
+        {
+          "action": "renew_certificate",
+          "reasoning": "Manually trigger certificate renewal",
+          "criticality": "critical"
+        },
+        {
+          "action": "check_cert_manager",
+          "reasoning": "Verify cert-manager is functioning",
+          "criticality": "high"
+        },
+        {
+          "action": "configure_auto_renewal",
+          "reasoning": "Enable automated certificate renewal",
+          "criticality": "high"
+        }
+      ],
+      "tags": ["certificate", "tls", "security", "expiration"]
+    },
+    {
+      "id": "template-011",
+      "title": "ImagePullBackOff - Registry Failure",
+      "description": "Pod unable to pull container image from registry. Deployment blocked.",
+      "category": "infrastructure_issue",
+      "severity": "critical",
+      "affected_service": "frontend-app",
+      "metrics": {
+        "image_pull_errors": 5,
+        "registry": "gcr.io/project/app:v1.2.3",
+        "error_message": "unauthorized: authentication required"
+      },
+      "root_cause": "Invalid registry credentials, network issues, or non-existent image",
+      "recommendations": [
+        {
+          "action": "check_image_pull_secret",
+          "reasoning": "Verify image pull secret exists and is valid",
+          "criticality": "critical"
+        },
+        {
+          "action": "verify_image_exists",
+          "reasoning": "Check if image tag exists in registry",
+          "criticality": "high"
+        },
+        {
+          "action": "check_registry_connectivity",
+          "reasoning": "Test network connectivity to registry",
+          "criticality": "high"
+        }
+      ],
+      "tags": ["image", "registry", "deployment", "authentication"]
+    },
+    {
+      "id": "template-012",
+      "title": "Load Balancer Health Check Failures",
+      "description": "External load balancer reporting unhealthy backend targets. Traffic routing failures.",
+      "category": "network_issue",
+      "severity": "critical",
+      "affected_service": "web-frontend",
+      "metrics": {
+        "healthy_targets": 2,
+        "unhealthy_targets": 8,
+        "health_check_failures": 45,
+        "success_rate": 20
+      },
+      "root_cause": "Application not responding on health check endpoint or port misconfiguration",
+      "recommendations": [
+        {
+          "action": "check_health_endpoint",
+          "reasoning": "Verify health check endpoint is responding",
+          "criticality": "critical"
+        },
+        {
+          "action": "restart_pods",
+          "reasoning": "Restart unhealthy pods",
+          "criticality": "high"
+        },
+        {
+          "action": "verify_service_ports",
+          "reasoning": "Check Service targetPort matches container port",
+          "criticality": "high"
+        }
+      ],
+      "tags": ["load-balancer", "health-check", "network", "availability"]
+    }
+  ]
+}

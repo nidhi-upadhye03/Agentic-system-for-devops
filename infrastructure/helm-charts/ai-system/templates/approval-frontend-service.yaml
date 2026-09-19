@@ -1,0 +1,22 @@
+{{- if .Values.approvalFrontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-system.fullname" . }}-approval-frontend
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.approvalFrontend.labels" . | nindent 4 }}
+  {{- with .Values.approvalFrontend.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.approvalFrontend.service.type }}
+  ports:
+  - port: {{ .Values.approvalFrontend.service.port }}
+    targetPort: {{ .Values.approvalFrontend.service.targetPort }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "ai-system.approvalFrontend.selectorLabels" . | nindent 4 }}
+{{- end }}

@@ -1,0 +1,185 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-config
+  namespace: monitoring
+data:
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+    }
+
+    filter {
+      # Parse JSON logs
+      if [message] =~ /^\{.*\}$/ {
+        json {
+          source => "message"
+          target => "log"
+        }
+      }
+
+      # Extract Kubernetes metadata
+      if [kubernetes] {
+        mutate {
+          add_field => {
+            "k8s_namespace" => "%{[kubernetes][namespace]}"
+            "k8s_pod" => "%{[kubernetes][pod][name]}"
+            "k8s_container" => "%{[kubernetes][container][name]}"
+            "k8s_node" => "%{[kubernetes][node][name]}"
+          }
+        }
+      }
+
+      # Parse log level
+      if [log][level] {
+        mutate {
+          add_field => { "level" => "%{[log][level]}" }
+        }
+      } else if [message] =~ /ERROR|error/ {
+        mutate {
+          add_field => { "level" => "error" }
+        }
+      } else if [message] =~ /WARN|warn/ {
+        mutate {
+          add_field => { "level" => "warn" }
+        }
+      } else if [message] =~ /INFO|info/ {
+        mutate {
+          add_field => { "level" => "info" }
+        }
+      } else if [message] =~ /DEBUG|debug/ {
+        mutate {
+          add_field => { "level" => "debug" }
+        }
+      } else {
+        mutate {
+          add_field => { "level" => "unknown" }
+        }
+      }
+
+      # Parse timestamp
+      if [log][timestamp] {
+        date {
+          match => [ "[log][timestamp]", "ISO8601" ]
+          target => "@timestamp"
+        }
+      }
+
+      # Extract request ID for tracing
+      if [log][request_id] {
+        mutate {
+          add_field => { "request_id" => "%{[log][request_id]}" }
+        }
+      }
+
+      # Extract user ID
+      if [log][user_id] {
+        mutate {
+          add_field => { "user_id" => "%{[log][user_id]}" }
+        }
+      }
+
+      # Parse HTTP logs
+      if [log][http] {
+        mutate {
+          add_field => {
+            "http_method" => "%{[log][http][method]}"
+            "http_path" => "%{[log][http][path]}"
+            "http_status" => "%{[log][http][status]}"
+            "http_duration_ms" => "%{[log][http][duration_ms]}"
+          }
+        }
+      }
+
+      # Parse error logs
+      if [log][error] {
+        mutate {
+          add_field => {
+            "error_message" => "%{[log][error][message]}"
+            "error_type" => "%{[log][error][type]}"
+          }
+        }
+        if [log][error][stack] {
+          mutate {
+            add_field => { "error_stack" => "%{[log][error][stack]}" }
+          }
+        }
+      }
+
+      # Tag LLM service logs
+      if [k8s_container] =~ /llm-service/ {
+        mutate {
+          add_tag => ["llm-service"]
+        }
+        if [log][llm] {
+          mutate {
+            add_field => {
+              "llm_model" => "%{[log][llm][model]}"
+              "llm_tokens" => "%{[log][llm][tokens]}"
+              "llm_duration_ms" => "%{[log][llm][duration_ms]}"
+            }
+          }
+        }
+      }
+
+      # Tag worker service logs
+      if [k8s_container] =~ /worker-service/ {
+        mutate {
+          add_tag => ["worker-service"]
+        }
+        if [log][task] {
+          mutate {
+            add_field => {
+              "task_id" => "%{[log][task][id]}"
+              "task_type" => "%{[log][task][type]}"
+              "task_status" => "%{[log][task][status]}"
+            }
+          }
+        }
+      }
+
+      # Tag approval service logs
+      if [k8s_container] =~ /approval-service/ {
+        mutate {
+          add_tag => ["approval-service"]
+        }
+        if [log][approval] {
+          mutate {
+            add_field => {
+              "approval_id" => "%{[log][approval][id]}"
+              "approval_status" => "%{[log][approval][status]}"
+              "approval_requester" => "%{[log][approval][requester]}"
+            }
+          }
+        }
+      }
+
+      # Tag API gateway logs
+      if [k8s_container] =~ /api-gateway/ {
+        mutate {
+          add_tag => ["api-gateway"]
+        }
+      }
+
+      # Remove unnecessary fields
+      mutate {
+        remove_field => ["host", "agent"]
+      }
+    }
+
+    output {
+      elasticsearch {
+        hosts => ["${ELASTICSEARCH_HOSTS}"]
+        index => "logstash-%{+YYYY.MM.dd}"
+        manage_template => true
+        template_name => "logstash"
+        template_overwrite => true
+      }
+
+      # Debug output (can be commented out in production)
+      # stdout {
+      #   codec => rubydebug
+      # }
+    }

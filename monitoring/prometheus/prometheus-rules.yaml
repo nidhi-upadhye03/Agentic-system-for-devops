@@ -1,0 +1,471 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  alert-rules.yml: |
+    groups:
+    - name: service_alerts
+      interval: 30s
+      rules:
+
+      # High Error Rate Alerts
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (service, namespace)
+            /
+            sum(rate(http_requests_total[5m])) by (service, namespace)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "High error rate detected in {{ $labels.service }}"
+          description: "Service {{ $labels.service }} in namespace {{ $labels.namespace }} has error rate of {{ $value | humanizePercentage }} (threshold: 5%)"
+          runbook_url: "https://runbooks.company.com/high-error-rate"
+
+      - alert: VeryHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (service, namespace)
+            /
+            sum(rate(http_requests_total[5m])) by (service, namespace)
+          ) > 0.20
+        for: 2m
+        labels:
+          severity: page
+          category: availability
+        annotations:
+          summary: "CRITICAL: Very high error rate in {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has error rate of {{ $value | humanizePercentage }} (threshold: 20%). Immediate action required!"
+          runbook_url: "https://runbooks.company.com/very-high-error-rate"
+
+      # LLM Service Specific Alerts
+      - alert: LLMServiceHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(llm_request_duration_seconds_bucket[5m])) by (le, service)
+          ) > 5
+        for: 10m
+        labels:
+          severity: warning
+          service: llm-service
+          category: performance
+        annotations:
+          summary: "LLM Service experiencing high latency"
+          description: "95th percentile latency for LLM requests is {{ $value }}s (threshold: 5s)"
+          runbook_url: "https://runbooks.company.com/llm-high-latency"
+
+      - alert: LLMServiceHighTokenUsage
+        expr: |
+          rate(llm_tokens_used_total[5m]) > 100000
+        for: 15m
+        labels:
+          severity: warning
+          service: llm-service
+          category: cost
+        annotations:
+          summary: "LLM Service high token usage detected"
+          description: "Token usage rate is {{ $value }} tokens/sec. This may indicate increased costs or potential abuse."
+          runbook_url: "https://runbooks.company.com/llm-high-token-usage"
+
+      - alert: LLMServiceDown
+        expr: |
+          up{job="llm-service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: llm-service
+          category: availability
+        annotations:
+          summary: "LLM Service is down"
+          description: "LLM Service has been unreachable for 2 minutes"
+          runbook_url: "https://runbooks.company.com/service-down"
+
+      # Worker Service Alerts
+      - alert: WorkerQueueBacklog
+        expr: |
+          rabbitmq_queue_messages{queue="worker-tasks"} > 1000
+        for: 10m
+        labels:
+          severity: warning
+          service: worker-service
+          category: performance
+        annotations:
+          summary: "Worker queue has significant backlog"
+          description: "Worker task queue has {{ $value }} pending messages (threshold: 1000)"
+          runbook_url: "https://runbooks.company.com/worker-queue-backlog"
+
+      - alert: WorkerQueueCriticalBacklog
+        expr: |
+          rabbitmq_queue_messages{queue="worker-tasks"} > 5000
+        for: 5m
+        labels:
+          severity: critical
+          service: worker-service
+          category: performance
+        annotations:
+          summary: "CRITICAL: Worker queue backlog"
+          description: "Worker task queue has {{ $value }} pending messages. Scale up workers immediately!"
+          runbook_url: "https://runbooks.company.com/worker-queue-critical"
+
+      - alert: WorkerHighFailureRate
+        expr: |
+          (
+            sum(rate(worker_tasks_failed_total[5m])) by (namespace)
+            /
+            sum(rate(worker_tasks_total[5m])) by (namespace)
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          service: worker-service
+          category: reliability
+        annotations:
+          summary: "Worker service has high task failure rate"
+          description: "Worker task failure rate is {{ $value | humanizePercentage }} (threshold: 10%)"
+          runbook_url: "https://runbooks.company.com/worker-high-failure"
+
+      - alert: WorkerProcessingTimeSlow
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(worker_task_duration_seconds_bucket[5m])) by (le, task_type)
+          ) > 300
+        for: 15m
+        labels:
+          severity: warning
+          service: worker-service
+          category: performance
+        annotations:
+          summary: "Worker tasks processing slowly"
+          description: "95th percentile processing time is {{ $value }}s for {{ $labels.task_type }} (threshold: 300s)"
+          runbook_url: "https://runbooks.company.com/worker-slow-processing"
+
+      # Approval Service Alerts
+      - alert: ApprovalPendingBacklog
+        expr: |
+          approval_pending_count > 100
+        for: 30m
+        labels:
+          severity: warning
+          service: approval-service
+          category: business
+        annotations:
+          summary: "High number of pending approvals"
+          description: "There are {{ $value }} pending approvals (threshold: 100)"
+          runbook_url: "https://runbooks.company.com/approval-backlog"
+
+      - alert: ApprovalTimeoutRate
+        expr: |
+          (
+            sum(rate(approval_timeout_total[1h]))
+            /
+            sum(rate(approval_requests_total[1h]))
+          ) > 0.05
+        for: 30m
+        labels:
+          severity: warning
+          service: approval-service
+          category: business
+        annotations:
+          summary: "High approval timeout rate"
+          description: "Approval timeout rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+          runbook_url: "https://runbooks.company.com/approval-timeouts"
+
+    - name: resource_alerts
+      interval: 30s
+      rules:
+
+      # CPU Alerts
+      - alert: HighCPUUsage
+        expr: |
+          (
+            sum(rate(container_cpu_usage_seconds_total{pod!=""}[5m])) by (pod, namespace)
+            /
+            sum(container_spec_cpu_quota{pod!=""}/container_spec_cpu_period{pod!=""}) by (pod, namespace)
+          ) > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "High CPU usage in pod {{ $labels.pod }}"
+          description: "CPU usage is {{ $value | humanizePercentage }} in pod {{ $labels.pod }} (namespace: {{ $labels.namespace }})"
+          runbook_url: "https://runbooks.company.com/high-cpu"
+
+      - alert: CriticalCPUUsage
+        expr: |
+          (
+            sum(rate(container_cpu_usage_seconds_total{pod!=""}[5m])) by (pod, namespace)
+            /
+            sum(container_spec_cpu_quota{pod!=""}/container_spec_cpu_period{pod!=""}) by (pod, namespace)
+          ) > 0.95
+        for: 5m
+        labels:
+          severity: critical
+          category: resources
+        annotations:
+          summary: "CRITICAL: CPU usage in pod {{ $labels.pod }}"
+          description: "CPU usage is {{ $value | humanizePercentage }} in pod {{ $labels.pod }}. Pod may be throttled!"
+          runbook_url: "https://runbooks.company.com/critical-cpu"
+
+      # Memory Alerts
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            sum(container_memory_working_set_bytes{pod!=""}) by (pod, namespace)
+            /
+            sum(container_spec_memory_limit_bytes{pod!=""}) by (pod, namespace)
+          ) > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "High memory usage in pod {{ $labels.pod }}"
+          description: "Memory usage is {{ $value | humanizePercentage }} in pod {{ $labels.pod }} (namespace: {{ $labels.namespace }})"
+          runbook_url: "https://runbooks.company.com/high-memory"
+
+      - alert: CriticalMemoryUsage
+        expr: |
+          (
+            sum(container_memory_working_set_bytes{pod!=""}) by (pod, namespace)
+            /
+            sum(container_spec_memory_limit_bytes{pod!=""}) by (pod, namespace)
+          ) > 0.95
+        for: 5m
+        labels:
+          severity: critical
+          category: resources
+        annotations:
+          summary: "CRITICAL: Memory usage in pod {{ $labels.pod }}"
+          description: "Memory usage is {{ $value | humanizePercentage }}. Pod may be OOMKilled!"
+          runbook_url: "https://runbooks.company.com/critical-memory"
+
+      # Disk Alerts
+      - alert: HighDiskUsage
+        expr: |
+          (
+            sum(node_filesystem_avail_bytes{mountpoint="/"}) by (instance)
+            /
+            sum(node_filesystem_size_bytes{mountpoint="/"}) by (instance)
+          ) < 0.20
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining on {{ $labels.instance }}"
+          runbook_url: "https://runbooks.company.com/low-disk-space"
+
+      - alert: CriticalDiskUsage
+        expr: |
+          (
+            sum(node_filesystem_avail_bytes{mountpoint="/"}) by (instance)
+            /
+            sum(node_filesystem_size_bytes{mountpoint="/"}) by (instance)
+          ) < 0.10
+        for: 5m
+        labels:
+          severity: critical
+          category: resources
+        annotations:
+          summary: "CRITICAL: Very low disk space on {{ $labels.instance }}"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining. Immediate action required!"
+          runbook_url: "https://runbooks.company.com/critical-disk-space"
+
+      # Pod Alerts
+      - alert: PodCrashLooping
+        expr: |
+          rate(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          category: stability
+        annotations:
+          summary: "Pod {{ $labels.pod }} is crash looping"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is restarting frequently"
+          runbook_url: "https://runbooks.company.com/pod-crash-loop"
+
+      - alert: PodNotReady
+        expr: |
+          sum by (namespace, pod) (kube_pod_status_phase{phase!~"Running|Succeeded"}) > 0
+        for: 10m
+        labels:
+          severity: warning
+          category: availability
+        annotations:
+          summary: "Pod {{ $labels.pod }} not ready"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been in {{ $labels.phase }} state for 10 minutes"
+          runbook_url: "https://runbooks.company.com/pod-not-ready"
+
+    - name: database_alerts
+      interval: 30s
+      rules:
+
+      # PostgreSQL Alerts
+      - alert: PostgreSQLDown
+        expr: |
+          pg_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database has been unreachable for 2 minutes"
+          runbook_url: "https://runbooks.company.com/postgresql-down"
+
+      - alert: PostgreSQLHighConnections
+        expr: |
+          (
+            sum(pg_stat_activity_count) by (instance)
+            /
+            sum(pg_settings_max_connections) by (instance)
+          ) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "PostgreSQL connection pool nearly exhausted"
+          description: "PostgreSQL is using {{ $value | humanizePercentage }} of max connections"
+          runbook_url: "https://runbooks.company.com/postgresql-connections"
+
+      - alert: PostgreSQLSlowQueries
+        expr: |
+          rate(pg_stat_activity_max_tx_duration[5m]) > 300
+        for: 10m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "PostgreSQL slow queries detected"
+          description: "Long-running queries detected ({{ $value }}s). This may impact performance."
+          runbook_url: "https://runbooks.company.com/postgresql-slow-queries"
+
+      # Redis Alerts
+      - alert: RedisDown
+        expr: |
+          redis_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: cache
+        annotations:
+          summary: "Redis is down"
+          description: "Redis instance has been unreachable for 2 minutes"
+          runbook_url: "https://runbooks.company.com/redis-down"
+
+      - alert: RedisHighMemoryUsage
+        expr: |
+          (
+            redis_memory_used_bytes
+            /
+            redis_memory_max_bytes
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis is using {{ $value | humanizePercentage }} of max memory"
+          runbook_url: "https://runbooks.company.com/redis-memory"
+
+      - alert: RedisHighEvictionRate
+        expr: |
+          rate(redis_evicted_keys_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Redis high key eviction rate"
+          description: "Redis is evicting {{ $value }} keys/sec. Consider increasing memory or reviewing cache strategy."
+          runbook_url: "https://runbooks.company.com/redis-evictions"
+
+      # RabbitMQ Alerts
+      - alert: RabbitMQDown
+        expr: |
+          rabbitmq_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: messaging
+        annotations:
+          summary: "RabbitMQ is down"
+          description: "RabbitMQ instance has been unreachable for 2 minutes"
+          runbook_url: "https://runbooks.company.com/rabbitmq-down"
+
+      - alert: RabbitMQHighMemoryUsage
+        expr: |
+          (
+            rabbitmq_process_resident_memory_bytes
+            /
+            rabbitmq_resident_memory_limit_bytes
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          category: messaging
+        annotations:
+          summary: "RabbitMQ high memory usage"
+          description: "RabbitMQ is using {{ $value | humanizePercentage }} of memory limit"
+          runbook_url: "https://runbooks.company.com/rabbitmq-memory"
+
+      - alert: RabbitMQUnroutableMessages
+        expr: |
+          rate(rabbitmq_channel_messages_unroutable_returned_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: messaging
+        annotations:
+          summary: "RabbitMQ unroutable messages detected"
+          description: "{{ $value }} messages/sec cannot be routed. Check queue bindings and routing keys."
+          runbook_url: "https://runbooks.company.com/rabbitmq-unroutable"
+
+    - name: kubernetes_alerts
+      interval: 30s
+      rules:
+
+      - alert: KubernetesNodeNotReady
+        expr: |
+          kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Kubernetes node {{ $labels.node }} not ready"
+          description: "Node {{ $labels.node }} has been NotReady for 5 minutes"
+          runbook_url: "https://runbooks.company.com/node-not-ready"
+
+      - alert: KubernetesDeploymentReplicasMismatch
+        expr: |
+          kube_deployment_spec_replicas != kube_deployment_status_replicas_available
+        for: 10m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Deployment {{ $labels.deployment }} has replica mismatch"
+          description: "Deployment {{ $labels.deployment }} desired replicas: {{ $value }}, but available replicas differ"
+          runbook_url: "https://runbooks.company.com/replica-mismatch"
+
+      - alert: KubernetesPersistentVolumeClaimPending
+        expr: |
+          kube_persistentvolumeclaim_status_phase{phase="Pending"} == 1
+        for: 10m
+        labels:
+          severity: warning
+          category: storage
+        annotations:
+          summary: "PVC {{ $labels.persistentvolumeclaim }} pending"
+          description: "PVC {{ $labels.persistentvolumeclaim }} in namespace {{ $labels.namespace }} has been pending for 10 minutes"
+          runbook_url: "https://runbooks.company.com/pvc-pending"

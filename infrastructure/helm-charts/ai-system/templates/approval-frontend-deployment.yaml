@@ -1,0 +1,85 @@
+{{- if .Values.approvalFrontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-system.fullname" . }}-approval-frontend
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.approvalFrontend.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.approvalFrontend.autoscaling.enabled }}
+  replicas: {{ .Values.approvalFrontend.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ai-system.approvalFrontend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "ai-system.approvalFrontend.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "ai-system.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "ai-system.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: approval-frontend
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+        image: {{ include "ai-system.image" (dict "repository" .Values.approvalFrontend.image.repository "tag" .Values.approvalFrontend.image.tag "root" .) }}
+        imagePullPolicy: {{ .Values.approvalFrontend.image.pullPolicy | default .Values.global.imagePullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.approvalFrontend.service.targetPort }}
+          protocol: TCP
+        env:
+        {{- range $key, $value := .Values.approvalFrontend.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        - name: REACT_APP_API_URL
+          value: "http://{{ include "ai-system.fullname" . }}-approval-backend:{{ .Values.approvalBackend.service.port }}"
+        envFrom:
+        {{- include "ai-system.envFrom.configMap" . | nindent 8 }}
+        {{- with .Values.approvalFrontend.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.approvalFrontend.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.approvalFrontend.resources | nindent 10 }}
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /var/cache/nginx
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

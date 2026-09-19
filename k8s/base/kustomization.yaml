@@ -1,0 +1,88 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ai-system
+
+resources:
+  # Namespace
+  - namespace.yaml
+
+  # RBAC
+  - rbac.yaml
+
+  # Configuration
+  - configmap.yaml
+  - secrets.yaml
+
+  # Database & Cache
+  - postgres-statefulset.yaml
+  - postgres-service.yaml
+  - redis-deployment.yaml
+  - redis-service.yaml
+
+  # Message Queue
+  - rabbitmq-statefulset.yaml
+  - rabbitmq-service.yaml
+
+  # Application Services
+  - llm-service-deployment.yaml
+  - llm-service-service.yaml
+  - worker-service-deployment.yaml
+  - worker-service-service.yaml
+  - approval-backend-deployment.yaml
+  - approval-backend-service.yaml
+  - approval-frontend-deployment.yaml
+  - approval-frontend-service.yaml
+
+  # Networking & Scaling
+  - ingress.yaml
+  - hpa.yaml
+  - networkpolicy.yaml
+
+commonLabels:
+  app.kubernetes.io/name: ai-system
+  app.kubernetes.io/part-of: ai-system
+  app.kubernetes.io/managed-by: kustomize
+
+commonAnnotations:
+  documentation: "https://github.com/your-org/ai-system"
+  contact: "devops@example.com"
+
+images:
+  - name: llm-service
+    newName: your-registry.azurecr.io/llm-service
+    newTag: latest
+  - name: worker-service
+    newName: your-registry.azurecr.io/worker-service
+    newTag: latest
+  - name: approval-backend
+    newName: your-registry.azurecr.io/approval-backend
+    newTag: latest
+  - name: approval-frontend
+    newName: your-registry.azurecr.io/approval-frontend
+    newTag: latest
+
+# Configuration transformations
+configMapGenerator:
+  - name: build-metadata
+    literals:
+      - BUILD_DATE="2025-10-15"
+      - VERSION="1.0.0"
+
+# Secret generation (for sealed secrets in production)
+# secretGenerator:
+#   - name: generated-secrets
+#     literals:
+#       - SECRET_KEY=changeme
+
+replicas:
+  - name: llm-service
+    count: 3
+  - name: worker-service
+    count: 3
+  - name: approval-backend
+    count: 3
+  - name: approval-frontend
+    count: 2
+  - name: redis
+    count: 1

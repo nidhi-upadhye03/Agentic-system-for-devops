@@ -1,0 +1,18 @@
+# Async HTTP client
+aiohttp==3.9.1
+
+# RabbitMQ async client
+aio-pika==9.3.1
+
+# Configuration management
+pydantic==2.5.2
+pydantic-settings==2.1.0
+
+# PostgreSQL async driver
+asyncpg==0.29.0
+
+# Redis async client
+redis==5.0.1
+
+# Python standard library
+python-dotenv==1.0.0

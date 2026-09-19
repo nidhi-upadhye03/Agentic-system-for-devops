@@ -1,0 +1,22 @@
+{{- if .Values.llmService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-system.fullname" . }}-llm-service
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.llmService.labels" . | nindent 4 }}
+  {{- with .Values.llmService.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.llmService.service.type }}
+  ports:
+  - port: {{ .Values.llmService.service.port }}
+    targetPort: {{ .Values.llmService.service.targetPort }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "ai-system.llmService.selectorLabels" . | nindent 4 }}
+{{- end }}

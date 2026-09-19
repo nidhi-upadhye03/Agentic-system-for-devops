@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ai-system
+
+bases:
+  - ../../base
+
+nameSuffix: -prod
+
+commonLabels:
+  environment: prod
+
+commonAnnotations:
+  environment: production
+  backup: "true"
+  monitoring: "true"
+
+patches:
+  - path: replica-patch.yaml
+  - path: configmap-patch.yaml
+  - path: ingress-patch.yaml
+
+resources:
+  - namespace-patch.yaml
+
+configMapGenerator:
+  - name: build-metadata
+    behavior: merge
+    literals:
+      - ENVIRONMENT=production
+
+images:
+  - name: llm-service
+    newName: your-registry.azurecr.io/llm-service
+    newTag: v1.0.0
+  - name: worker-service
+    newName: your-registry.azurecr.io/worker-service
+    newTag: v1.0.0
+  - name: approval-backend
+    newName: your-registry.azurecr.io/approval-backend
+    newTag: v1.0.0
+  - name: approval-frontend
+    newName: your-registry.azurecr.io/approval-frontend
+    newTag: v1.0.0

@@ -1,0 +1,225 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ai-system.fullname" . }}-llm-service
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.llmService.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ai-system.llmService.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    {{- toYaml .Values.networkPolicy.policyTypes | nindent 4 }}
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.approvalBackend.selectorLabels" . | nindent 10 }}
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.worker.selectorLabels" . | nindent 10 }}
+    {{- with .Values.networkPolicy.ingress }}
+    {{- toYaml . | nindent 2 }}
+    {{- end }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.llmService.service.targetPort }}
+  egress:
+  - to:
+    - podSelector: {}
+    {{- with .Values.networkPolicy.egress }}
+    {{- toYaml . | nindent 2 }}
+    {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ai-system.fullname" . }}-worker
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.worker.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ai-system.worker.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    {{- toYaml .Values.networkPolicy.policyTypes | nindent 4 }}
+  ingress:
+  - from:
+    - podSelector: {}
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.llmService.selectorLabels" . | nindent 10 }}
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.rabbitmq.selectorLabels" . | nindent 10 }}
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.postgresql.selectorLabels" . | nindent 10 }}
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.redis.selectorLabels" . | nindent 10 }}
+  {{- with .Values.networkPolicy.egress }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ai-system.fullname" . }}-approval-backend
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.approvalBackend.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ai-system.approvalBackend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    {{- toYaml .Values.networkPolicy.policyTypes | nindent 4 }}
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.approvalFrontend.selectorLabels" . | nindent 10 }}
+    {{- with .Values.networkPolicy.ingress }}
+    {{- toYaml . | nindent 2 }}
+    {{- end }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.approvalBackend.service.targetPort }}
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.llmService.selectorLabels" . | nindent 10 }}
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.rabbitmq.selectorLabels" . | nindent 10 }}
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.postgresql.selectorLabels" . | nindent 10 }}
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.redis.selectorLabels" . | nindent 10 }}
+  {{- with .Values.networkPolicy.egress }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ai-system.fullname" . }}-approval-frontend
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.approvalFrontend.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ai-system.approvalFrontend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    {{- toYaml .Values.networkPolicy.policyTypes | nindent 4 }}
+  ingress:
+  {{- with .Values.networkPolicy.ingress }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+  - from:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.approvalFrontend.service.targetPort }}
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.approvalBackend.selectorLabels" . | nindent 10 }}
+  {{- with .Values.networkPolicy.egress }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ai-system.fullname" . }}-postgresql
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.postgresql.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ai-system.postgresql.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.worker.selectorLabels" . | nindent 10 }}
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.approvalBackend.selectorLabels" . | nindent 10 }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.postgresql.service.targetPort }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ai-system.fullname" . }}-redis
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.redis.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ai-system.redis.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.worker.selectorLabels" . | nindent 10 }}
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.approvalBackend.selectorLabels" . | nindent 10 }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.redis.service.targetPort }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ai-system.fullname" . }}-rabbitmq
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.rabbitmq.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ai-system.rabbitmq.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.worker.selectorLabels" . | nindent 10 }}
+    - podSelector:
+        matchLabels:
+          {{- include "ai-system.approvalBackend.selectorLabels" . | nindent 10 }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.rabbitmq.service.ports.amqp }}
+    - protocol: TCP
+      port: {{ .Values.rabbitmq.service.ports.management }}
+{{- end }}

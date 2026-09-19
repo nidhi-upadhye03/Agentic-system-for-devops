@@ -1,0 +1,42 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ai-system
+
+bases:
+  - ../../base
+
+nameSuffix: -staging
+
+commonLabels:
+  environment: staging
+
+commonAnnotations:
+  environment: staging
+
+patches:
+  - path: replica-patch.yaml
+  - path: configmap-patch.yaml
+
+resources:
+  - namespace-patch.yaml
+
+configMapGenerator:
+  - name: build-metadata
+    behavior: merge
+    literals:
+      - ENVIRONMENT=staging
+
+images:
+  - name: llm-service
+    newName: your-registry.azurecr.io/llm-service
+    newTag: staging
+  - name: worker-service
+    newName: your-registry.azurecr.io/worker-service
+    newTag: staging
+  - name: approval-backend
+    newName: your-registry.azurecr.io/approval-backend
+    newTag: staging
+  - name: approval-frontend
+    newName: your-registry.azurecr.io/approval-frontend
+    newTag: staging

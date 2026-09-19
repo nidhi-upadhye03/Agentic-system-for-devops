@@ -1,0 +1,115 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'local'
+    platform: 'docker'
+
+# Scrape configurations for local Docker services
+scrape_configs:
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # LLM Service
+  - job_name: 'llm-service'
+    static_configs:
+      - targets: ['llm-service:8000']
+        labels:
+          service: 'llm-service'
+          environment: 'local'
+
+  # Worker Service
+  - job_name: 'worker-service'
+    static_configs:
+      - targets: ['worker:8000']
+        labels:
+          service: 'worker'
+          environment: 'local'
+
+  # Approval Backend
+  - job_name: 'approval-backend'
+    static_configs:
+      - targets: ['approval-backend:3000']
+        labels:
+          service: 'approval-backend'
+          environment: 'local'
+
+  # PostgreSQL (if exporter is enabled)
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres:5432']
+        labels:
+          service: 'postgres'
+          environment: 'local'
+
+  # Redis (if exporter is enabled)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+        labels:
+          service: 'redis'
+          environment: 'local'
+
+  # RabbitMQ Management metrics
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+        labels:
+          service: 'rabbitmq'
+          environment: 'local'
+
+  # Monitoring Agent
+  - job_name: 'monitoring-agent'
+    static_configs:
+      - targets: ['monitoring-agent:8000']
+        labels:
+          service: 'monitoring-agent'
+          environment: 'local'
+
+  # Analyzer Agent
+  - job_name: 'analyzer-agent'
+    static_configs:
+      - targets: ['analyzer-agent:8000']
+        labels:
+          service: 'analyzer-agent'
+          environment: 'local'
+
+  # Auto-Response Agent
+  - job_name: 'auto-response-agent'
+    static_configs:
+      - targets: ['auto-response-agent:8000']
+        labels:
+          service: 'auto-response-agent'
+          environment: 'local'
+
+  # Notifier Agent
+  - job_name: 'notifier-agent'
+    static_configs:
+      - targets: ['notifier-agent:8000']
+        labels:
+          service: 'notifier-agent'
+          environment: 'local'
+
+  # Memory Agent
+  - job_name: 'memory-agent'
+    static_configs:
+      - targets: ['memory-agent:8000']
+        labels:
+          service: 'memory-agent'
+          environment: 'local'
+
+  # Test App - Chaos Engineering
+  - job_name: 'test-app'
+    scrape_interval: 5s  # More frequent scraping for test app
+    static_configs:
+      - targets: ['test-app:8080']
+        labels:
+          service: 'test-app'
+          environment: 'local'
+          app_type: 'chaos-test'

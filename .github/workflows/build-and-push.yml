@@ -1,0 +1,90 @@
+﻿name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  DOCKER_USERNAME: nidhi-upadhye03
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service:
+          - name: monitoring-agent
+            path: services/monitoring-agent
+          - name: analyzer-agent
+            path: services/analyzer-agent
+          - name: auto-response-agent
+            path: services/auto-response-agent
+          - name: notifier-agent
+            path: services/notifier-agent
+          - name: memory-agent
+            path: services/memory-agent
+          - name: llm-service
+            path: services/llm-service
+          - name: approval-dashboard-backend
+            path: services/approval-dashboard/backend
+          - name: approval-dashboard-frontend
+            path: services/approval-dashboard/frontend
+          - name: test-app
+            path: services/test-app
+          - name: prometheus
+            path: services/prometheus
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and push ${{ matrix.service.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.path }}
+          file: ${{ matrix.service.path }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_USERNAME }}/${{ matrix.service.name }}:latest
+            ${{ env.DOCKER_USERNAME }}/${{ matrix.service.name }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.DOCKER_USERNAME }}/${{ matrix.service.name }}:buildcache
+          cache-to: type=registry,ref=${{ env.DOCKER_USERNAME }}/${{ matrix.service.name }}:buildcache,mode=max
+
+      - name: Verify image
+        run: |
+          docker pull ${{ env.DOCKER_USERNAME }}/${{ matrix.service.name }}:latest
+          docker images | grep ${{ matrix.service.name }}
+
+  summary:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build summary
+        run: |
+          echo "âœ… All 10 Docker images built and pushed successfully!"
+          echo ""
+          echo "Images available on Docker Hub:"
+          echo "  - nidhi-upadhye03/monitoring-agent:latest"
+          echo "  - nidhi-upadhye03/analyzer-agent:latest"
+          echo "  - nidhi-upadhye03/auto-response-agent:latest"
+          echo "  - nidhi-upadhye03/notifier-agent:latest"
+          echo "  - nidhi-upadhye03/memory-agent:latest"
+          echo "  - nidhi-upadhye03/llm-service:latest"
+          echo "  - nidhi-upadhye03/approval-dashboard-backend:latest"
+          echo "  - nidhi-upadhye03/approval-dashboard-frontend:latest"
+          echo "  - nidhi-upadhye03/test-app:latest"
+          echo "  - nidhi-upadhye03/prometheus:latest"
+          echo ""
+          echo "ðŸš€ Ready to deploy to Azure!"
+

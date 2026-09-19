@@ -1,0 +1,80 @@
+{{- if .Values.llmService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-system.fullname" . }}-llm-service
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.llmService.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.llmService.autoscaling.enabled }}
+  replicas: {{ .Values.llmService.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ai-system.llmService.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "ai-system.llmService.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "ai-system.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "ai-system.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: llm-service
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+        image: {{ include "ai-system.image" (dict "repository" .Values.llmService.image.repository "tag" .Values.llmService.image.tag "root" .) }}
+        imagePullPolicy: {{ .Values.llmService.image.pullPolicy | default .Values.global.imagePullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.llmService.service.targetPort }}
+          protocol: TCP
+        env:
+        {{- range $key, $value := .Values.llmService.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        envFrom:
+        {{- include "ai-system.envFrom.configMap" . | nindent 8 }}
+        {{- include "ai-system.envFrom.secrets" . | nindent 8 }}
+        {{- with .Values.llmService.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.llmService.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.llmService.resources | nindent 10 }}
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

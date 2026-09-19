@@ -1,0 +1,235 @@
+# Production environment overrides
+global:
+  environment: prod
+  namespace: ai-system-prod
+  domain: ai-system.com
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets:
+    - name: registry-credentials
+
+llmService:
+  replicaCount: 3
+  image:
+    tag: v1.0.0
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+    limits:
+      cpu: 8000m
+      memory: 16Gi
+  env:
+    LOG_LEVEL: WARN
+    MODEL_NAME: gpt-4
+    TEMPERATURE: "0.7"
+    MAX_TOKENS: "4096"
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 75
+
+worker:
+  replicaCount: 5
+  image:
+    tag: v1.0.0
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+  env:
+    LOG_LEVEL: WARN
+    WORKER_CONCURRENCY: "16"
+    TASK_TIMEOUT: "600"
+  autoscaling:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 75
+
+approvalBackend:
+  replicaCount: 3
+  image:
+    tag: v1.0.0
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+  env:
+    NODE_ENV: production
+    LOG_LEVEL: warn
+    CORS_ORIGIN: https://ai-system.com
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 75
+
+approvalFrontend:
+  replicaCount: 3
+  image:
+    tag: v1.0.0
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  env:
+    REACT_APP_ENV: production
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 75
+
+rabbitmq:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 4000m
+      memory: 4Gi
+  persistence:
+    enabled: true
+    storageClass: fast-ssd
+    size: 100Gi
+  auth:
+    username: admin
+    password: ""  # Must be provided via external secrets
+
+postgresql:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+    limits:
+      cpu: 8000m
+      memory: 16Gi
+  persistence:
+    enabled: true
+    storageClass: fast-ssd
+    size: 200Gi
+  auth:
+    password: ""  # Must be provided via external secrets
+  env:
+    POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+
+redis:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  persistence:
+    enabled: true
+    storageClass: fast-ssd
+    size: 50Gi
+  auth:
+    password: ""  # Must be provided via external secrets
+  env:
+    REDIS_MAXMEMORY: 2gb
+    REDIS_MAXMEMORY_POLICY: allkeys-lru
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "200"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+  hosts:
+    - host: ai-system.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: approval-backend
+          port: 3000
+        - path: /llm
+          pathType: Prefix
+          service: llm-service
+          port: 8000
+        - path: /
+          pathType: Prefix
+          service: approval-frontend
+          port: 80
+  tls:
+    - secretName: ai-system-prod-tls
+      hosts:
+        - ai-system.com
+
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+rbac:
+  enabled: true
+
+secrets:
+  data:
+    # These must be provided via external secrets operator or sealed secrets
+    DATABASE_URL: ""
+    REDIS_URL: ""
+    RABBITMQ_URL: ""
+    JWT_SECRET: ""
+    OPENAI_API_KEY: ""
+
+# Production-specific settings
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+
+# Pod disruption budgets
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Affinity for high availability
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - ai-system
+          topologyKey: kubernetes.io/hostname

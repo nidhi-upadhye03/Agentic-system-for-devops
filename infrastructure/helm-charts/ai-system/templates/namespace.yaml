@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.labels" . | nindent 4 }}
+    name: {{ include "ai-system.namespace" . }}
+  annotations:
+    description: "Namespace for AI System components"

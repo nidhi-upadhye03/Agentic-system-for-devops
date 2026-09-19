@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ai-system-sa
+  namespace: ai-system
+  labels:
+    app: ai-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ai-system-role
+  namespace: ai-system
+  labels:
+    app: ai-system
+rules:
+# Pods - read access for service discovery
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+
+# ConfigMaps - read access
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+
+# Secrets - read access (limited)
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+
+# Services - read access for service discovery
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch"]
+
+# Endpoints - read access for service discovery
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ai-system-rolebinding
+  namespace: ai-system
+  labels:
+    app: ai-system
+subjects:
+- kind: ServiceAccount
+  name: ai-system-sa
+  namespace: ai-system
+roleRef:
+  kind: Role
+  name: ai-system-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# ClusterRole for RabbitMQ clustering (needs cluster-wide access)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ai-system-rabbitmq-cluster-role
+  labels:
+    app: rabbitmq
+rules:
+# Access to endpoints for peer discovery
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["get", "list", "watch"]
+
+# Access to pods for peer discovery
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+
+# Access to services for peer discovery
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ai-system-rabbitmq-cluster-rolebinding
+  labels:
+    app: rabbitmq
+subjects:
+- kind: ServiceAccount
+  name: ai-system-sa
+  namespace: ai-system
+roleRef:
+  kind: ClusterRole
+  name: ai-system-rabbitmq-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# PodSecurityPolicy (if PSP is enabled)
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: ai-system-psp
+  labels:
+    app: ai-system
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
+    apparmor.security.beta.kubernetes.io/allowedProfileNames: 'runtime/default'
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: 'runtime/default'
+    apparmor.security.beta.kubernetes.io/defaultProfileName: 'runtime/default'
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+  - ALL
+  allowedCapabilities:
+  - NET_BIND_SERVICE
+  volumes:
+  - 'configMap'
+  - 'emptyDir'
+  - 'projected'
+  - 'secret'
+  - 'downwardAPI'
+  - 'persistentVolumeClaim'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+  readOnlyRootFilesystem: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ai-system-psp-role
+  namespace: ai-system
+  labels:
+    app: ai-system
+rules:
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs: ['use']
+  resourceNames:
+  - ai-system-psp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ai-system-psp-rolebinding
+  namespace: ai-system
+  labels:
+    app: ai-system
+subjects:
+- kind: ServiceAccount
+  name: ai-system-sa
+  namespace: ai-system
+roleRef:
+  kind: Role
+  name: ai-system-psp-role
+  apiGroup: rbac.authorization.k8s.io

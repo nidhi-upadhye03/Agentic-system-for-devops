@@ -1,0 +1,476 @@
+# Default values for ai-system (dev-like settings)
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  environment: dev
+  namespace: ai-system-dev
+  domain: dev.ai-system.local
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+
+# LLM Service Configuration
+llmService:
+  enabled: true
+  name: llm-service
+  replicaCount: 1
+  image:
+    repository: your-registry/llm-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+    annotations: {}
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  env:
+    MODEL_NAME: gpt-3.5-turbo
+    MAX_TOKENS: "2048"
+    TEMPERATURE: "0.7"
+    LOG_LEVEL: DEBUG
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Worker Service Configuration
+worker:
+  enabled: true
+  name: worker
+  replicaCount: 2
+  image:
+    repository: your-registry/worker
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  env:
+    WORKER_CONCURRENCY: "4"
+    TASK_TIMEOUT: "300"
+    LOG_LEVEL: DEBUG
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
+  livenessProbe:
+    exec:
+      command:
+        - /bin/sh
+        - -c
+        - celery inspect ping -d celery@$HOSTNAME
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+  readinessProbe:
+    exec:
+      command:
+        - /bin/sh
+        - -c
+        - celery inspect ping -d celery@$HOSTNAME
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Approval Backend Configuration
+approvalBackend:
+  enabled: true
+  name: approval-backend
+  replicaCount: 1
+  image:
+    repository: your-registry/approval-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+    annotations: {}
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  env:
+    NODE_ENV: development
+    PORT: "3000"
+    LOG_LEVEL: debug
+    CORS_ORIGIN: "*"
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Approval Frontend Configuration
+approvalFrontend:
+  enabled: true
+  name: approval-frontend
+  replicaCount: 1
+  image:
+    repository: your-registry/approval-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+    annotations: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    REACT_APP_API_URL: http://approval-backend:3000
+    REACT_APP_ENV: development
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# RabbitMQ Configuration
+rabbitmq:
+  enabled: true
+  name: rabbitmq
+  replicaCount: 1
+  image:
+    repository: rabbitmq
+    tag: 3.12-management-alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    ports:
+      amqp: 5672
+      management: 15672
+    annotations: {}
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 8Gi
+  auth:
+    username: admin
+    password: changeme
+    erlangCookie: secret-cookie
+  env:
+    RABBITMQ_DEFAULT_VHOST: /
+  livenessProbe:
+    exec:
+      command:
+        - rabbitmq-diagnostics
+        - -q
+        - ping
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+  readinessProbe:
+    exec:
+      command:
+        - rabbitmq-diagnostics
+        - -q
+        - check_running
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# PostgreSQL Configuration
+postgresql:
+  enabled: true
+  name: postgres
+  replicaCount: 1
+  image:
+    repository: postgres
+    tag: 15-alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 5432
+    targetPort: 5432
+    annotations: {}
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 10Gi
+  auth:
+    database: ai_system
+    username: postgres
+    password: changeme
+  env:
+    POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+  livenessProbe:
+    exec:
+      command:
+        - /bin/sh
+        - -c
+        - pg_isready -U postgres
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    exec:
+      command:
+        - /bin/sh
+        - -c
+        - pg_isready -U postgres
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Redis Configuration
+redis:
+  enabled: true
+  name: redis
+  replicaCount: 1
+  image:
+    repository: redis
+    tag: 7-alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 6379
+    targetPort: 6379
+    annotations: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 5Gi
+  auth:
+    enabled: true
+    password: changeme
+  env:
+    REDIS_MAXMEMORY: 256mb
+    REDIS_MAXMEMORY_POLICY: allkeys-lru
+  livenessProbe:
+    exec:
+      command:
+        - redis-cli
+        - ping
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    exec:
+      command:
+        - redis-cli
+        - ping
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+  hosts:
+    - host: dev.ai-system.local
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: approval-backend
+          port: 3000
+        - path: /llm
+          pathType: Prefix
+          service: llm-service
+          port: 8000
+        - path: /
+          pathType: Prefix
+          service: approval-frontend
+          port: 80
+  tls:
+    - secretName: ai-system-tls
+      hosts:
+        - dev.ai-system.local
+
+# Network Policy Configuration
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+
+# RBAC Configuration
+rbac:
+  enabled: true
+  serviceAccount:
+    create: true
+    name: ai-system-sa
+    annotations: {}
+  role:
+    rules:
+      - apiGroups: [""]
+        resources: ["pods", "services", "configmaps", "secrets"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["apps"]
+        resources: ["deployments", "statefulsets"]
+        verbs: ["get", "list", "watch"]
+
+# ConfigMap Configuration
+configMap:
+  enabled: true
+  data:
+    APP_NAME: ai-system
+    APP_VERSION: 1.0.0
+    TIMEZONE: UTC
+    LOG_FORMAT: json
+
+# Secrets Configuration
+secrets:
+  enabled: true
+  type: Opaque
+  data:
+    # Base64 encoded values (these should be overridden)
+    DATABASE_URL: cG9zdGdyZXNxbDovL3Bvc3RncmVzOmNoYW5nZW1lQHBvc3RncmVzOjU0MzIvYWlfc3lzdGVt
+    REDIS_URL: cmVkaXM6Ly86Y2hhbmdlbWVAcmVkaXM6NjM3OS8w
+    RABBITMQ_URL: YW1xcDovL2FkbWluOmNoYW5nZW1lQHJhYmJpdG1xOjU2NzIv
+    JWT_SECRET: c3VwZXItc2VjcmV0LWp3dC1rZXk=
+    OPENAI_API_KEY: c2stWU9VUi1PUEVOQUktQVBJLUtFWQ==
+
+# Pod Security Context
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Security Context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+
+# Node Selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Pod Annotations
+podAnnotations: {}
+
+# Pod Labels
+podLabels: {}

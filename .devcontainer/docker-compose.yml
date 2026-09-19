@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    volumes:
+      - ../..:/workspace:cached
+
+    command: sleep infinity
+
+    network_mode: service:postgres
+
+    environment:
+      - DATABASE_URL=postgresql://devops:devops123@localhost:5432/devops_db
+      - REDIS_URL=redis://:redis123@localhost:6379/0
+      - RABBITMQ_URL=amqp://devops:devops123@localhost:5672/devops
+      - QDRANT_HOST=localhost
+      - QDRANT_HTTP_PORT=6333
+      - LLM_SERVICE_URL=http://localhost:8000
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../../infrastructure/database/init:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_USER: devops
+      POSTGRES_PASSWORD: devops123
+      POSTGRES_DB: devops_db
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --requirepass redis123
+    volumes:
+      - redis-data:/data
+    network_mode: service:postgres
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: devops
+      RABBITMQ_DEFAULT_PASS: devops123
+      RABBITMQ_DEFAULT_VHOST: devops
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ../../infrastructure/rabbitmq:/etc/rabbitmq/init
+    network_mode: service:postgres
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    volumes:
+      - qdrant-data:/qdrant/storage
+    network_mode: service:postgres
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  qdrant-data:

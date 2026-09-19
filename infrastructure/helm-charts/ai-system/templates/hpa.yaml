@@ -1,0 +1,135 @@
+{{- if .Values.llmService.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "ai-system.fullname" . }}-llm-service
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.llmService.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ai-system.fullname" . }}-llm-service
+  minReplicas: {{ .Values.llmService.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.llmService.autoscaling.maxReplicas }}
+  metrics:
+  {{- if .Values.llmService.autoscaling.targetCPUUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.llmService.autoscaling.targetCPUUtilizationPercentage }}
+  {{- end }}
+  {{- if .Values.llmService.autoscaling.targetMemoryUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.llmService.autoscaling.targetMemoryUtilizationPercentage }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.worker.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "ai-system.fullname" . }}-worker
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.worker.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ai-system.fullname" . }}-worker
+  minReplicas: {{ .Values.worker.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.worker.autoscaling.maxReplicas }}
+  metrics:
+  {{- if .Values.worker.autoscaling.targetCPUUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.worker.autoscaling.targetCPUUtilizationPercentage }}
+  {{- end }}
+  {{- if .Values.worker.autoscaling.targetMemoryUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.worker.autoscaling.targetMemoryUtilizationPercentage }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.approvalBackend.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "ai-system.fullname" . }}-approval-backend
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.approvalBackend.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ai-system.fullname" . }}-approval-backend
+  minReplicas: {{ .Values.approvalBackend.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.approvalBackend.autoscaling.maxReplicas }}
+  metrics:
+  {{- if .Values.approvalBackend.autoscaling.targetCPUUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.approvalBackend.autoscaling.targetCPUUtilizationPercentage }}
+  {{- end }}
+  {{- if .Values.approvalBackend.autoscaling.targetMemoryUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.approvalBackend.autoscaling.targetMemoryUtilizationPercentage }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.approvalFrontend.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "ai-system.fullname" . }}-approval-frontend
+  namespace: {{ include "ai-system.namespace" . }}
+  labels:
+    {{- include "ai-system.approvalFrontend.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ai-system.fullname" . }}-approval-frontend
+  minReplicas: {{ .Values.approvalFrontend.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.approvalFrontend.autoscaling.maxReplicas }}
+  metrics:
+  {{- if .Values.approvalFrontend.autoscaling.targetCPUUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.approvalFrontend.autoscaling.targetCPUUtilizationPercentage }}
+  {{- end }}
+  {{- if .Values.approvalFrontend.autoscaling.targetMemoryUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.approvalFrontend.autoscaling.targetMemoryUtilizationPercentage }}
+  {{- end }}
+{{- end }}
