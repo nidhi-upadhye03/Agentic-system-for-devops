@@ -11,20 +11,20 @@
 
 ---
 
-## âœ¨ Latest Updates (January 2026)
+## ✨ Latest Updates (January 2026)
 
-- âœ… **Complete End-to-End Workflow Verified** - Full incident detection â†’ analysis â†’ approval â†’ remediation cycle tested
-- âœ… **Manual Review Feature** - ALL analyzed incidents (even without automated recommendations) sent to approval dashboard for human oversight
-- âœ… **Approval Dashboard Integration** - Fixed API endpoint routing, response parsing, and real-time WebSocket updates
-- âœ… **Dual Dashboard System** - Ops Dashboard (localhost:3003) + Approval Dashboard (localhost:3001) fully operational
-- âœ… **18 Production Services** - Complete microservices stack running with Docker Compose
-- âœ… **Gemini 2.0 Integration** - Google Gemini 2.0-Flash model support with 2000 RPM rate limiting
-- âœ… **Redis Caching Optimizations** - LLM response caching (300s TTL) to reduce API costs
-- âœ… **Docker Compose Executor** - Support for both Kubernetes and Docker Compose environments
+- ✅ **Complete End-to-End Workflow Verified** - Full incident detection → analysis → approval → remediation cycle tested
+- ✅ **Manual Review Feature** - ALL analyzed incidents (even without automated recommendations) sent to approval dashboard for human oversight
+- ✅ **Approval Dashboard Integration** - Fixed API endpoint routing, response parsing, and real-time WebSocket updates
+- ✅ **Dual Dashboard System** - Ops Dashboard (localhost:3003) + Approval Dashboard (localhost:3001) fully operational
+- ✅ **18 Production Services** - Complete microservices stack running with Docker Compose
+- ✅ **Gemini 2.0 Integration** - Google Gemini 2.0-Flash model support with 2000 RPM rate limiting
+- ✅ **Redis Caching Optimizations** - LLM response caching (300s TTL) to reduce API costs
+- ✅ **Docker Compose Executor** - Support for both Kubernetes and Docker Compose environments
 
 ---
 
-## ðŸŽ¯ Project Overview
+## 🎯 Project Overview
 
 The **LLM DevOps Copilot** is a production-grade, event-driven platform featuring **5 autonomous AI agents** that work together to provide intelligent incident management. 
 ### Team Collaboration and Contribution
@@ -41,91 +41,91 @@ The **LLM DevOps Copilot** is a production-grade, event-driven platform featurin
 5. **Learn** from past incidents using RAG (Retrieval-Augmented Generation) with vector embeddings
 6. **Notify** teams via Slack and real-time dashboard updates
 
-### ðŸš€ Key Features
+### 🚀 Key Features
 
-- âœ… **Zero-Touch Incident Resolution**: 95%+ confidence threshold for auto-execution
-- âœ… **Human-in-the-Loop Approval**: Comprehensive web dashboard for reviewing and approving critical actions
-- âœ… **Intelligent Manual Review**: Incidents without automated recommendations automatically routed for human analysis
-- âœ… **Pattern Detection**: Learns from recurring incidents (exact, semantic, temporal patterns)
-- âœ… **Multi-LLM Support**: OpenAI GPT-4, Anthropic Claude, Google Gemini 2.0-Flash with intelligent fallbacks
-- âœ… **Event-Driven Architecture**: RabbitMQ message broker with topic-based routing and durable queues
-- âœ… **Production-Ready**: Docker Compose + Kubernetes support, health checks, graceful shutdowns
-- âœ… **Real-Time Observability**: Prometheus metrics, Grafana dashboards, live agent logs
-- âœ… **Cost Optimized**: Redis caching, rate limiting, token optimization (~$0.03-0.05 per incident)
+- ✅ **Zero-Touch Incident Resolution**: 95%+ confidence threshold for auto-execution
+- ✅ **Human-in-the-Loop Approval**: Comprehensive web dashboard for reviewing and approving critical actions
+- ✅ **Intelligent Manual Review**: Incidents without automated recommendations automatically routed for human analysis
+- ✅ **Pattern Detection**: Learns from recurring incidents (exact, semantic, temporal patterns)
+- ✅ **Multi-LLM Support**: OpenAI GPT-4, Anthropic Claude, Google Gemini 2.0-Flash with intelligent fallbacks
+- ✅ **Event-Driven Architecture**: RabbitMQ message broker with topic-based routing and durable queues
+- ✅ **Production-Ready**: Docker Compose + Kubernetes support, health checks, graceful shutdowns
+- ✅ **Real-Time Observability**: Prometheus metrics, Grafana dashboards, live agent logs
+- ✅ **Cost Optimized**: Redis caching, rate limiting, token optimization (~$0.03-0.05 per incident)
 
 ---
 
-## ðŸ—ï¸ System Architecture
+## 🏗️ System Architecture
 
 ### High-Level Architecture
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                      LLM DevOps Copilot Architecture                          â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                      LLM DevOps Copilot Architecture                          │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”       â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”       â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  Test App    â”‚â”€â”€â”€â”€â”€â”€â–¶â”‚  Prometheus  â”‚â”€â”€â”€â”€â”€â”€â–¶â”‚  Monitoring  â”‚
-â”‚ (Metrics)    â”‚metricsâ”‚   Scraper    â”‚scrape â”‚    Agent     â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜       â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜       â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”˜
-                                                       â”‚ Incident Event
-                                                       â”‚ (monitoring.incident.*)
-                                                       â–¼
-                                              â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-                                              â”‚   RabbitMQ     â”‚
-                                              â”‚  Event Bus     â”‚
-                                              â”‚ Topic Exchange â”‚
-                                              â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”˜
-                                                       â”‚
-                      â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-                      â”‚                                â”‚                      â”‚
-                      â–¼                                â–¼                      â–¼
-            â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”          â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-            â”‚  Analyzer Agent  â”‚â—€â”€â”€â”€â”€â”€â”€â”€â”€â–¶â”‚  LLM Service     â”‚    â”‚  Notifier    â”‚
-            â”‚                  â”‚  API     â”‚  â€¢ GPT-4         â”‚    â”‚   Agent      â”‚
-            â”‚ â€¢ RAG Search     â”‚          â”‚  â€¢ Gemini 2.0    â”‚    â”‚  â€¢ Slack     â”‚
-            â”‚ â€¢ Redis Cache    â”‚          â”‚  â€¢ Claude 3.5    â”‚    â”‚  â€¢ WebSocket â”‚
-            â”‚ â€¢ Action Mapping â”‚          â”‚  â€¢ OpenRouter    â”‚    â”‚  â€¢ Email     â”‚
-            â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜          â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                     â”‚ Analysis Complete
-                     â”‚ (analyzer.analysis.complete)
-                     â”‚ â€¢ Confidence: 75-95%
-                     â”‚ â€¢ Recommendations: 0-N
-                     â–¼
-            â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-            â”‚ Auto-Response    â”‚
-            â”‚    Agent         â”‚
-            â”‚                  â”‚
-            â”‚ Decision Logic:  â”‚
-            â”‚ â”œâ”€ Confidenceâ‰¥95%+Low â†’ Auto-Execute
-            â”‚ â”œâ”€ Confidence<95% â†’ Request Approval
-            â”‚ â””â”€ No Recommendations â†’ Manual Review
-            â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                     â”‚
-         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-         â”‚                       â”‚
-         â–¼                       â–¼
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  Kubernetes/    â”‚    â”‚  Approval Dashboard â”‚
-â”‚ Docker Compose  â”‚    â”‚   (localhost:3001)  â”‚
-â”‚                 â”‚    â”‚                     â”‚
-â”‚ Actions:        â”‚    â”‚ â€¢ Review Incident   â”‚
-â”‚ â€¢ Scale         â”‚    â”‚ â€¢ View Analysis     â”‚
-â”‚ â€¢ Restart       â”‚    â”‚ â€¢ Approve/Reject    â”‚
-â”‚ â€¢ Rollback      â”‚    â”‚ â€¢ Manual Override   â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-         â”‚                       â”‚
-         â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                     â”‚ Action Result
-                     â–¼
-            â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-            â”‚  Memory Agent    â”‚â—€â”€â”€â”€â”€â”€â”€â”€â–¶â”‚  Ops Dashboard   â”‚
-            â”‚                  â”‚         â”‚ (localhost:3003) â”‚
-            â”‚ â€¢ PostgreSQL     â”‚         â”‚                  â”‚
-            â”‚ â€¢ Qdrant Vector  â”‚         â”‚ â€¢ System Status  â”‚
-            â”‚ â€¢ Pattern Store  â”‚         â”‚ â€¢ Incident Feed  â”‚
-            â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜         â”‚ â€¢ Agent Health   â”‚
-                                         â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────┐       ┌──────────────┐       ┌──────────────┐
+│  Test App    │──────▶│  Prometheus  │──────▶│  Monitoring  │
+│ (Metrics)    │metrics│   Scraper    │scrape │    Agent     │
+└──────────────┘       └──────────────┘       └──────┬───────┘
+                                                       │ Incident Event
+                                                       │ (monitoring.incident.*)
+                                                       ▼
+                                              ┌────────────────┐
+                                              │   RabbitMQ     │
+                                              │  Event Bus     │
+                                              │ Topic Exchange │
+                                              └────────┬───────┘
+                                                       │
+                      ┌────────────────────────────────┼──────────────────────┐
+                      │                                │                      │
+                      ▼                                ▼                      ▼
+            ┌──────────────────┐          ┌──────────────────┐    ┌──────────────┐
+            │  Analyzer Agent  │◀────────▶│  LLM Service     │    │  Notifier    │
+            │                  │  API     │  • GPT-4         │    │   Agent      │
+            │ • RAG Search     │          │  • Gemini 2.0    │    │  • Slack     │
+            │ • Redis Cache    │          │  • Claude 3.5    │    │  • WebSocket │
+            │ • Action Mapping │          │  • OpenRouter    │    │  • Email     │
+            └────────┬─────────┘          └──────────────────┘    └──────────────┘
+                     │ Analysis Complete
+                     │ (analyzer.analysis.complete)
+                     │ • Confidence: 75-95%
+                     │ • Recommendations: 0-N
+                     ▼
+            ┌──────────────────┐
+            │ Auto-Response    │
+            │    Agent         │
+            │                  │
+            │ Decision Logic:  │
+            │ ├─ Confidence≥95%+Low → Auto-Execute
+            │ ├─ Confidence<95% → Request Approval
+            │ └─ No Recommendations → Manual Review
+            └────────┬─────────┘
+                     │
+         ┌───────────┴───────────┐
+         │                       │
+         ▼                       ▼
+┌─────────────────┐    ┌─────────────────────┐
+│  Kubernetes/    │    │  Approval Dashboard │
+│ Docker Compose  │    │   (localhost:3001)  │
+│                 │    │                     │
+│ Actions:        │    │ • Review Incident   │
+│ • Scale         │    │ • View Analysis     │
+│ • Restart       │    │ • Approve/Reject    │
+│ • Rollback      │    │ • Manual Override   │
+└─────────────────┘    └─────────────────────┘
+         │                       │
+         └───────────┬───────────┘
+                     │ Action Result
+                     ▼
+            ┌──────────────────┐         ┌──────────────────┐
+            │  Memory Agent    │◀───────▶│  Ops Dashboard   │
+            │                  │         │ (localhost:3003) │
+            │ • PostgreSQL     │         │                  │
+            │ • Qdrant Vector  │         │ • System Status  │
+            │ • Pattern Store  │         │ • Incident Feed  │
+            └──────────────────┘         │ • Agent Health   │
+                                         └──────────────────┘
 ```
 
 ### Event Flow Sequence
@@ -140,52 +140,52 @@ The **LLM DevOps Copilot** is a production-grade, event-driven platform featurin
 
 ---
 
-## ðŸ¤– The 5 Autonomous Agents
+## 🤖 The 5 Autonomous Agents
 
-### 1. **Monitoring Agent** ðŸ“Š
+### 1. **Monitoring Agent** 📊
 - **Technology**: Python 3.11, Prometheus Client, Kubernetes API
 - **Function**: Continuously monitors cluster metrics and detects anomalies
 - **Triggers**: CPU > 80%, Memory > 85%, Error Rate > 5%, Pod restarts > 3
-- **Anomaly Detection**: Z-score based statistical analysis (2.0Ïƒ threshold)
+- **Anomaly Detection**: Z-score based statistical analysis (2.0σ threshold)
 - **Output**: Publishes incident events to RabbitMQ (`monitoring.incident.*`)
 
-### 2. **Analyzer Agent** ðŸ§ 
+### 2. **Analyzer Agent** 🧠
 - **Technology**: Python 3.11, OpenAI SDK, Anthropic SDK, Qdrant Client
 - **Function**: Performs LLM-powered root cause analysis
 - **Inputs**: Incident data + Recent logs + Similar past incidents (RAG)
 - **LLMs**: GPT-4 (OpenAI), Claude 3.5 Sonnet (Anthropic)
 - **Output**: Root cause + Confidence score + Actionable recommendations
-- **RAG**: Searches vector store for similar incidents (similarity â‰¥ 0.7)
+- **RAG**: Searches vector store for similar incidents (similarity ≥ 0.7)
 
-### 3. **Auto-Response Agent** âš¡
+### 3. **Auto-Response Agent** ⚡
 - **Technology**: Python 3.11, Kubernetes Python Client, Approval Dashboard API
 - **Function**: Executes or requests approval for remediation actions
 - **Actions**: Scale deployment, Restart pods, Rollback deployment
 - **Decision Logic**:
-  - **Auto-execute**: Confidence â‰¥ 95% + Low/Medium criticality
+  - **Auto-execute**: Confidence ≥ 95% + Low/Medium criticality
   - **Request approval**: Confidence < 95% OR High/Critical criticality
 - **Safety**: Cooldown periods, replica limits (min: 1, max: 10), dry-run mode
 
-### 4. **Notifier Agent** ðŸ“¢
+### 4. **Notifier Agent** 📢
 - **Technology**: Python 3.11, Slack SDK (slack-sdk 3.23.0)
 - **Function**: Sends rich Slack notifications with context
 - **Message Types**: Incident detected, Analysis complete, Action executed, Approval pending
 - **Formatting**: Slack Block Kit (headers, sections, fields, emoji indicators)
 - **Channels**: `#devopsalerts` (configurable)
 
-### 5. **Memory Agent** ðŸ§ ðŸ’¾
+### 5. **Memory Agent** 🧠💾
 - **Technology**: Python 3.11, PostgreSQL (asyncpg), Qdrant Cloud, OpenAI Embeddings
 - **Function**: Stores incidents and detects patterns for continuous learning
 - **Storage**: 4 PostgreSQL tables (incidents, analyses, resolutions, patterns)
 - **Embeddings**: OpenAI text-embedding-3-small (1536 dimensions)
 - **Pattern Detection**:
   1. **Exact Match**: Same metric + target recurring (SQL GROUP BY)
-  2. **Semantic**: Similar issues via vector clustering (similarity â‰¥ 0.85)
+  2. **Semantic**: Similar issues via vector clustering (similarity ≥ 0.85)
   3. **Temporal**: Time-based patterns (day of week + hour analysis)
 
 ---
 
-## ðŸ› ï¸ Technology Stack
+## 🛠️ Technology Stack
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
@@ -231,80 +231,80 @@ The **LLM DevOps Copilot** is a production-grade, event-driven platform featurin
 
 ---
 
-## ðŸ“ Project Structure
+## 📁 Project Structure
 
 ```
 devops/
-â”œâ”€â”€ README.md                                # This file
-â”œâ”€â”€ IMPLEMENTATION_TRACKER.md                # Development progress tracker
-â”œâ”€â”€ LOCAL_RULES.md                           # Local development rules
-â”œâ”€â”€ TODO_BEFORE_DEPLOY.md                    # Pre-deployment checklist
-â”œâ”€â”€ FUTUREVISION.md                          # System architecture & vision
-â”œâ”€â”€ AZURE_DEPLOYMENT_GUIDE.md                # Azure deployment guide
-â”œâ”€â”€ deploy-from-dockerhub.sh                 # Azure deployment script
-â”‚
-â”œâ”€â”€ services/                                # Microservices
-â”‚   â”œâ”€â”€ monitoring-agent/                    # Incident detection
-â”‚   â”‚   â”œâ”€â”€ app/
-â”‚   â”‚   â”‚   â”œâ”€â”€ main.py                      # Main agent loop
-â”‚   â”‚   â”‚   â”œâ”€â”€ prometheus_client.py         # Metrics collector
-â”‚   â”‚   â”‚   â”œâ”€â”€ k8s_client.py                # Kubernetes API
-â”‚   â”‚   â”‚   â”œâ”€â”€ anomaly_detector.py          # Z-score anomaly detection
-â”‚   â”‚   â”‚   â””â”€â”€ event_publisher.py           # RabbitMQ publisher
-â”‚   â”‚   â”œâ”€â”€ Dockerfile
-â”‚   â”‚   â””â”€â”€ requirements.txt
-â”‚   â”‚
-â”‚   â”œâ”€â”€ analyzer-agent/                      # Root cause analysis
-â”‚   â”‚   â”œâ”€â”€ app/
-â”‚   â”‚   â”‚   â”œâ”€â”€ main.py                      # Event consumer + orchestrator
-â”‚   â”‚   â”‚   â”œâ”€â”€ llm_analyzer.py              # LLM integration
-â”‚   â”‚   â”‚   â”œâ”€â”€ rag_search.py                # Vector similarity search
-â”‚   â”‚   â”‚   â””â”€â”€ log_fetcher.py               # Log aggregation
-â”‚   â”‚   â”œâ”€â”€ Dockerfile
-â”‚   â”‚   â””â”€â”€ requirements.txt
-â”‚   â”‚
-â”‚   â”œâ”€â”€ auto-response-agent/                 # Automated remediation
-â”‚   â”‚   â”œâ”€â”€ app/
-â”‚   â”‚   â”‚   â”œâ”€â”€ main.py                      # Remediation orchestrator
-â”‚   â”‚   â”‚   â”œâ”€â”€ k8s_executor.py              # K8s actions (scale/restart/rollback)
-â”‚   â”‚   â”‚   â”œâ”€â”€ approval_client.py           # Approval API client
-â”‚   â”‚   â”‚   â””â”€â”€ action_validator.py          # Safety checks
-â”‚   â”‚   â”œâ”€â”€ Dockerfile
-â”‚   â”‚   â””â”€â”€ requirements.txt
-â”‚   â”‚
-â”‚   â”œâ”€â”€ notifier-agent/                      # Slack notifications
-â”‚   â”‚   â”œâ”€â”€ app/
-â”‚   â”‚   â”‚   â”œâ”€â”€ main.py                      # Notification orchestrator
-â”‚   â”‚   â”‚   â””â”€â”€ slack_client.py              # Slack Block Kit integration
-â”‚   â”‚   â”œâ”€â”€ Dockerfile
-â”‚   â”‚   â””â”€â”€ requirements.txt
-â”‚   â”‚
-â”‚   â”œâ”€â”€ memory-agent/                        # Incident learning
-â”‚   â”‚   â”œâ”€â”€ app/
-â”‚   â”‚   â”‚   â”œâ”€â”€ main.py                      # Memory orchestrator
-â”‚   â”‚   â”‚   â”œâ”€â”€ incident_store.py            # PostgreSQL storage
-â”‚   â”‚   â”‚   â”œâ”€â”€ vector_store.py              # Qdrant embeddings
-â”‚   â”‚   â”‚   â””â”€â”€ pattern_detector.py          # Pattern analysis
-â”‚   â”‚   â”œâ”€â”€ Dockerfile
-â”‚   â”‚   â””â”€â”€ requirements.txt
-â”‚   â”‚
-â”‚   â”œâ”€â”€ llm-service/                         # LLM API wrapper
-â”‚   â”‚   â”œâ”€â”€ app/
-â”‚   â”‚   â”‚   â”œâ”€â”€ main.py                      # FastAPI server
-â”‚   â”‚   â”‚   â”œâ”€â”€ llm_client.py                # Multi-provider LLM client
-â”‚   â”‚   â”‚   â””â”€â”€ rag_pipeline.py              # RAG with Qdrant
-â”‚   â”‚   â”œâ”€â”€ Dockerfile
-â”‚   â”‚   â””â”€â”€ requirements.txt
-â”‚   â”‚
-â”‚   â””â”€â”€ approval-dashboard/                  # Human-in-the-loop UI
-â”‚       â”œâ”€â”€ backend/
-â”‚       â”‚   â”œâ”€â”€ src/
-â”‚       â”‚   â”‚   â”œâ”€â”€ server.js                # Express + Socket.io
-â”‚       â”‚   â”‚   â”œâ”€â”€ routes/                  # REST API routes
-â”‚       â”‚   â”‚   â””â”€â”€ services/                # Business logic
-â”‚       â”‚   â”œâ”€â”€ Dockerfile
-â”‚       â”‚   â””â”€â”€ package.json
-â”‚       â””â”€â”€ front (Docker Compose - Recommended)
+├── README.md                                # This file
+├── IMPLEMENTATION_TRACKER.md                # Development progress tracker
+├── LOCAL_RULES.md                           # Local development rules
+├── TODO_BEFORE_DEPLOY.md                    # Pre-deployment checklist
+├── FUTUREVISION.md                          # System architecture & vision
+├── AZURE_DEPLOYMENT_GUIDE.md                # Azure deployment guide
+├── deploy-from-dockerhub.sh                 # Azure deployment script
+│
+├── services/                                # Microservices
+│   ├── monitoring-agent/                    # Incident detection
+│   │   ├── app/
+│   │   │   ├── main.py                      # Main agent loop
+│   │   │   ├── prometheus_client.py         # Metrics collector
+│   │   │   ├── k8s_client.py                # Kubernetes API
+│   │   │   ├── anomaly_detector.py          # Z-score anomaly detection
+│   │   │   └── event_publisher.py           # RabbitMQ publisher
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   │
+│   ├── analyzer-agent/                      # Root cause analysis
+│   │   ├── app/
+│   │   │   ├── main.py                      # Event consumer + orchestrator
+│   │   │   ├── llm_analyzer.py              # LLM integration
+│   │   │   ├── rag_search.py                # Vector similarity search
+│   │   │   └── log_fetcher.py               # Log aggregation
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   │
+│   ├── auto-response-agent/                 # Automated remediation
+│   │   ├── app/
+│   │   │   ├── main.py                      # Remediation orchestrator
+│   │   │   ├── k8s_executor.py              # K8s actions (scale/restart/rollback)
+│   │   │   ├── approval_client.py           # Approval API client
+│   │   │   └── action_validator.py          # Safety checks
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   │
+│   ├── notifier-agent/                      # Slack notifications
+│   │   ├── app/
+│   │   │   ├── main.py                      # Notification orchestrator
+│   │   │   └── slack_client.py              # Slack Block Kit integration
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   │
+│   ├── memory-agent/                        # Incident learning
+│   │   ├── app/
+│   │   │   ├── main.py                      # Memory orchestrator
+│   │   │   ├── incident_store.py            # PostgreSQL storage
+│   │   │   ├── vector_store.py              # Qdrant embeddings
+│   │   │   └── pattern_detector.py          # Pattern analysis
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   │
+│   ├── llm-service/                         # LLM API wrapper
+│   │   ├── app/
+│   │   │   ├── main.py                      # FastAPI server
+│   │   │   ├── llm_client.py                # Multi-provider LLM client
+│   │   │   └── rag_pipeline.py              # RAG with Qdrant
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   │
+│   └── approval-dashboard/                  # Human-in-the-loop UI
+│       ├── backend/
+│       │   ├── src/
+│       │   │   ├── server.js                # Express + Socket.io
+│       │   │   ├── routes/                  # REST API routes
+│       │   │   └── services/                # Business logic
+│       │   ├── Dockerfile
+│       │   └── package.json
+│       └── front (Docker Compose - Recommended)
 
 ### Prerequisites
 
@@ -322,31 +322,31 @@ devops/
 **Optional:**
 - Slack Bot Token ([Get here](https://api.slack.com/apps)) - For notifications
 - Qdrant Cloud account ([Get here](https://cloud.qdrant.io/)) - For vector storage (self-hosted by default
-â”œâ”€â”€ k8s/                                     # Kubernetes manifests
-â”‚   â”œâ”€â”€ agents/                              # Agent deployments
-â”‚   â”œâ”€â”€ infrastructure/                      # RabbitMQ, PostgreSQL, Redis
-â”‚   â””â”€â”€ monitoring/                          # Prometheus, Grafana
-â”‚
-â”œâ”€â”€ infrastructure/
-â”‚   â”œâ”€â”€ helm-charts/                         # Helm charts
-â”‚   â””â”€â”€ database/                            # Database schemas
-â”‚
-â””â”€â”€ monitoring/
-    â”œâ”€â”€ prometheus/                          # Prometheus config
-    â”œâ”€â”€ grafana/                             # Grafana dashboards
-    â””â”€â”€ alertmanager/                        # Alert rules
+├── k8s/                                     # Kubernetes manifests
+│   ├── agents/                              # Agent deployments
+│   ├── infrastructure/                      # RabbitMQ, PostgreSQL, Redis
+│   └── monitoring/                          # Prometheus, Grafana
+│
+├── infrastructure/
+│   ├── helm-charts/                         # Helm charts
+│   └── database/                            # Database schemas
+│
+└── monitoring/
+    ├── prometheus/                          # Prometheus config
+    ├── grafana/                             # Grafana dashboards
+    └── alertmanager/                        # Alert rules
 ```
 
 ---
 
-## ðŸš€ Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - **Kubernetes cluster** (Azure AKS, AWS EKS, GCP GKE, or local Minikube)
 - **kubectl** configured
 - **Docker** (for local development)
-- **ðŸ”¥ One-Command Setup
+- **🔥 One-Command Setup
 
 1. **Clone the repository**:
 ```bash
@@ -398,12 +398,12 @@ docker-compose up -d --build
 ```
 
 This command will:
-- âœ… Build all Docker images (~5-10 minutes first time)
-- âœ… Start PostgreSQL, Redis, RabbitMQ
-- âœ… Initialize database schema
-- âœ… Launch all 5 AI agents
-- âœ… Start both dashboards (Approval + Ops)
-- âœ… Start monitoring stack (Prometheus, Grafana)
+- ✅ Build all Docker images (~5-10 minutes first time)
+- ✅ Start PostgreSQL, Redis, RabbitMQ
+- ✅ Initialize database schema
+- ✅ Launch all 5 AI agents
+- ✅ Start both dashboards (Approval + Ops)
+- ✅ Start monitoring stack (Prometheus, Grafana)
 
 4. **Verify all services are healthy** (~60-90 seconds for full startup):
 ```bash
@@ -433,7 +433,7 @@ curl -X POST http://localhost:8080/trigger \
   -d '{"metric":"cpu_percent","value":95.5,"threshold":80.0}'
 ```
 
-7. **Watch the magic happen** ðŸŽ©âœ¨:
+7. **Watch the magic happen** 🎩✨:
 
 Open 5 terminals and monitor agent logs in real-time:
 
@@ -467,16 +467,16 @@ docker logs devops-llm-service --follow
 docker-compose logs -f monitoring-agent analyzer-agent auto-response-agent notifier-agent llm-service
 ```
 
-### ðŸ“Š Verify Complete Workflow
+### 📊 Verify Complete Workflow
 
 After triggering an incident, you should see:
 
-1. âœ… **Monitoring Agent** detects anomaly (CPU > 80%)
-2. âœ… **Analyzer Agent** performs LLM analysis (Gemini 2.0-Flash)
-3. âœ… **Auto-Response Agent** creates approval request
-4. âœ… **Approval Dashboard** displays incident card at http://localhost:3001
-5. âœ… **Notifier Agent** sends notifications
-6. âœ… **Ops Dashboard** shows incident in feed at http://localhost:3003
+1. ✅ **Monitoring Agent** detects anomaly (CPU > 80%)
+2. ✅ **Analyzer Agent** performs LLM analysis (Gemini 2.0-Flash)
+3. ✅ **Auto-Response Agent** creates approval request
+4. ✅ **Approval Dashboard** displays incident card at http://localhost:3001
+5. ✅ **Notifier Agent** sends notifications
+6. ✅ **Ops Dashboard** shows incident in feed at http://localhost:3003
 
 **Expected Timeline:**
 - Detection: < 15 seconds
@@ -485,7 +485,7 @@ After triggering an incident, you should see:
 - Dashboard update: Real-time (WebSocket)
 - **Total MTTR: < 2 minutes** (automated path)
 
-### ðŸŽ¨ View Formatted Agent Logs
+### 🎨 View Formatted Agent Logs
 
 ```powershell
 # Windows PowerShell - Beautiful colored output
@@ -509,7 +509,7 @@ Write-Host "`n[5] LLM SERVICE" -ForegroundColor Green
 docker logs devops-llm-service --tail 10
 ```
 
-### ðŸ›‘ Stop All Services
+### 🛑 Stop All Services
 
 ```bash
 # Graceful shutdown
@@ -522,7 +522,7 @@ docker-compose down -v
 docker-compose down -v --rmi all
 ```
 
-### ðŸ”§ Troubleshooting
+### 🔧 Troubleshooting
 
 **Issue: Containers failing health checks**
 ```bash
@@ -569,7 +569,7 @@ curl http://localhost:8000/health
 docker logs devops-llm-service --tail 100
 ```
 
-### ðŸš€ Alternative Deployment Options
+### 🚀 Alternative Deployment Options
 
 #### Option 1: Kubernetes (Production)
 
@@ -609,7 +609,7 @@ kubectl get pods -n devops-agents
 
 ---
 
-## ðŸ”§ Configuration
+## 🔧 Configuration
 
 ### Agent Configuration
 
@@ -644,9 +644,9 @@ K8S_DRY_RUN=false
 
 ---
 
-## ðŸ“Š Monitoring & Observability
+## 📊 Monitoring & Observability
 
-### ðŸŽ¯ Access All Dashboards
+### 🎯 Access All Dashboards
 
 | Service | URL | Credentials | Purpose |
 |---------|-----|-------------|---------|
@@ -656,7 +656,7 @@ K8S_DRY_RUN=false
 | **Prometheus** | http://localhost:9090 | None | Raw metrics, PromQL queries, alerts |
 | **RabbitMQ Management** | http://localhost:15672 | devops/devops123 | Queue monitoring, message rates |
 
-### ðŸ“ˆ Key Metrics
+### 📈 Key Metrics
 
 **System Performance:**
 - **Incident Detection Rate**: 10-50 incidents per hour (configurable)
@@ -672,7 +672,7 @@ K8S_DRY_RUN=false
 - **Notifier Agent**: Notification delivery rate, Slack API status
 - **Memory Ag & Validation
 
-### ðŸŽ¯ End-to-End Workflow Test
+### 🎯 End-to-End Workflow Test
 
 **1. Trigger a test incident:**
 ```bash
@@ -680,7 +680,7 @@ K8S_DRY_RUN=false
 python trigger_incident.py
 
 # Output:
-# âœ… Event published to RabbitMQ
+# ✅ Event published to RabbitMQ
 # Incident ID: manual-test-1767728017
 # Waiting 8 seconds for pipeline to process...
 ```
@@ -690,22 +690,22 @@ python trigger_incident.py
 **Stage 1 - Detection:**
 ```bash
 docker logs devops-monitoring-agent --tail 20
-# Expected: "ðŸš¨ Incident detected: threshold_breach"
+# Expected: "🚨 Incident detected: threshold_breach"
 ```
 
 **Stage 2 - Analysis:**
 ```bash
 docker logs devops-analyzer-agent --tail 30
-# Expected: "ðŸ” Analyzing incident manual-test-1767728017"
-# Expected: "âœ“ Analysis complete: confidence=75%"
-# Expected: "âœ“ Published analysis for incident"
+# Expected: "🔍 Analyzing incident manual-test-1767728017"
+# Expected: "✓ Analysis complete: confidence=75%"
+# Expected: "✓ Published analysis for incident"
 ```
 
 **Stage 3 - Decision:**
 ```bash
 docker logs devops-auto-response-agent --tail 30
 # Expected: "Processing analysis for incident manual-test-1767728017: 1 recommendations"
-# Expected: "âœ“ Created approval request: 119"
+# Expected: "✓ Created approval request: 119"
 ```
 
 **Stage 4 - Approval Dashboard:**
@@ -728,14 +728,14 @@ docker logs devops-notifier-agent --tail 15
 Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "   WORKFLOW VERIFICATION" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "âœ“ Incident Detection: OK" -ForegroundColor Green
-Write-Host "âœ“ AI Analysis: OK (Confidence: 75%)" -ForegroundColor Green
-Write-Host "âœ“ Approval Created: OK (ID: 119)" -ForegroundColor Green
-Write-Host "âœ“ Dashboard Updated: OK" -ForegroundColor Green
-Write-Host "âœ“ Notification Sent: OK" -ForegroundColor Green
+Write-Host "✓ Incident Detection: OK" -ForegroundColor Green
+Write-Host "✓ AI Analysis: OK (Confidence: 75%)" -ForegroundColor Green
+Write-Host "✓ Approval Created: OK (ID: 119)" -ForegroundColor Green
+Write-Host "✓ Dashboard Updated: OK" -ForegroundColor Green
+Write-Host "✓ Notification Sent: OK" -ForegroundColor Green
 ```
 
-### ðŸ”¬ Unit Tests
+### 🔬 Unit Tests
 
 ```bash
 # Run all tests for a specific agent
@@ -752,7 +752,7 @@ pytest tests/test_prometheus_client.py -v
 ./run_tests.sh
 ```
 
-### ðŸŽ­ Chaos Testing
+### 🎭 Chaos Testing
 
 **Simulate different incident types:**
 
@@ -761,17 +761,17 @@ pytest tests/test_prometheus_client.py -v
 python trigger_incident.py
 # DefaProject Status & Roadmap
 
-### âœ… Completed (v1.0 - January 2026)
+### ✅ Completed (v1.0 - January 2026)
 
-- âœ… **Core 5 Agents**: All agents fully functional and tested
-- âœ… **Event-Driven Architecture**: RabbitMQ with topic-based routing
-- âœ… **LLM Integration**: GPT-4, Gemini 2.0-Flash, Claude 3.5 support
-- âœ… **Approval Dashboard**: Full-featured web UI with real-time updates
-- âœ… **Ops Dashboard**: System monitoring and incident feed
-- âœ… **Docker Compose**: 18-service stack with health checks
-- âœ…ðŸŽ“ Documentation
+- ✅ **Core 5 Agents**: All agents fully functional and tested
+- ✅ **Event-Driven Architecture**: RabbitMQ with topic-based routing
+- ✅ **LLM Integration**: GPT-4, Gemini 2.0-Flash, Claude 3.5 support
+- ✅ **Approval Dashboard**: Full-featured web UI with real-time updates
+- ✅ **Ops Dashboard**: System monitoring and incident feed
+- ✅ **Docker Compose**: 18-service stack with health checks
+- ✅🎓 Documentation
 
-### ðŸ“š Additional Resources
+### 📚 Additional Resources
 
 - **[PROJECT_EXAM_DOCUMENTATION.md](PROJECT_EXAM_DOCUMENTATION.md)** - Comprehensive academic documentation with abstract, requirements, workflow, and future enhancements
 - **[GETTING_STARTED.md](GETTING_STARTED.md)** - Detailed setup guide for beginners
@@ -782,14 +782,14 @@ python trigger_incident.py
 - **[FUTUREVISION.md](FUTUREVISION.md)** - Vision and future plans
 - **[API.md](docs/API.md)** - API reference documentation
 
-### ðŸŽ¬ Video Tutorials (Coming Soon)
+### 🎬 Video Tutorials (Coming Soon)
 
 - System overview and demo
 - Local deployment walkthrough
 - Creating custom agents
 - Troubleshooting common issues
 
-## â“ FAQ
+## ❓ FAQ
 
 **Q: What's the difference between Approval Dashboard and Ops Dashboard?**
 - **Approval Dashboard (3001)**: For reviewing and approving AI-recommended actions. Human-in-the-loop interface.
@@ -820,7 +820,7 @@ Yes! Edit `services/auto-response-agent/app/executors/` to add custom executors.
 **Q: How do I integrate with my existing monitoring?**
 The Monitoring Agent can be configured to read from any Prometheus-compatible metrics endpoint. Update `PROMETHEUS_URL` in `.env`.
 
-## ðŸ¤ Contributing
+## 🤝 Contributing
 
 We welcome contributions! Here's how:
 
@@ -831,23 +831,23 @@ We welcome contributions! Here's how:
 5. **Open** a Pull Request
 
 **Areas we need help:**
-- ðŸ§ª More unit tests and integration tests
-- ðŸ“ Documentation improvements and tutorials
-- ðŸŽ¨ Dashboard UI/UX enhancements
-- ðŸ”Œ New executor implementations (Ansible, Terraform, etc.)
-- ðŸ¤– Custom agent implementations
-- ðŸŒ Internationalization (i18n)
+- 🧪 More unit tests and integration tests
+- 📝 Documentation improvements and tutorials
+- 🎨 Dashboard UI/UX enhancements
+- 🔌 New executor implementations (Ansible, Terraform, etc.)
+- 🤖 Custom agent implementations
+- 🌍 Internationalization (i18n)
 
 **Code Style:**
 - Python: Black formatter, type hints, docstrings
 - JavaScript/React: ESLint, Prettier
 - Commit messages: Conventional Commits forma
-- ðŸš§ **Kubernetes Deployment**: Helm charts and production manifests (80% complete)
-- ðŸš§ **Azure Container Apps**: Cloud deployment automation (60% complete)
-- ðŸš§ **Advanced Analytics**: ML-based incident clustering and prediction (30% complete)
-- ðŸš§ **Multi-Cluster Support**: Federation across multiple K8s clusters (20% complete)
+- 🚧 **Kubernetes Deployment**: Helm charts and production manifests (80% complete)
+- 🚧 **Azure Container Apps**: Cloud deployment automation (60% complete)
+- 🚧 **Advanced Analytics**: ML-based incident clustering and prediction (30% complete)
+- 🚧 **Multi-Cluster Support**: Federation across multiple K8s clusters (20% complete)
 
-### ðŸ”® Future Roadmap
+### 🔮 Future Roadmap
 
 **Q1 2026:**
 - [ ] Time-series forecasting for predictive incident detection
@@ -897,7 +897,7 @@ curl -X POST http://localhost:8080/trigger \
   }'
 ```
 
-### ðŸ”Ž Integration Tests
+### 🔎 Integration Tests
 
 **Test agent communication:**
 ```bash
@@ -914,7 +914,7 @@ docker exec devops-redis redis-cli -a redis123 KEYS "*llm*"
 curl http://localhost:6333/collections
 ```
 
-### ðŸ“Š Performance Benchmarks
+### 📊 Performance Benchmarks
 
 Run performance tests to verify SLAs:
 
@@ -935,7 +935,7 @@ docker stats --no-stream
 # Target: < 12 GB total RAM usage
 ```
 
-### âœ… Health Check Tests
+### ✅ Health Check Tests
 
 ```bash
 # Check all service health endpoints
@@ -954,24 +954,24 @@ avg(analysis_latency_seconds)
 # Auto-execution success rate
 sum(rate(acti & Community
 
-### ðŸ†˜ Getting Help
+### 🆘 Getting Help
 
 **For bugs and issues:**
-- ðŸ“ Open a [GitHub Issue](https://github.com/nidhi-upadhye03/Agentic-system-for-devops/issues)
-- ðŸ› Use issue templates for bug reports
-- ðŸ’¡ Use feature request template for suggestions
+- 📝 Open a [GitHub Issue](https://github.com/nidhi-upadhye03/Agentic-system-for-devops/issues)
+- 🐛 Use issue templates for bug reports
+- 💡 Use feature request template for suggestions
 
 **For questions and discussions:**
-- ðŸ’¬ GitHub Discussions (coming soon)
-- ðŸ“§ Email: nidhiupadhye1302@gmail.com
-- ðŸ“– Read the docs: [Documentation](#-documentation)
+- 💬 GitHub Discussions (coming soon)
+- 📧 Email: nidhiupadhye1302@gmail.com
+- 📖 Read the docs: [Documentation](#-documentation)
 
 **For urgent support:**
-- ðŸš¨ Check [Troubleshooting](#-troubleshooting) section first
-- ðŸ“Š Check [FAQ](#-faq) for common questions
-- ðŸ” Search existing GitHub issues
+- 🚨 Check [Troubleshooting](#-troubleshooting) section first
+- 📊 Check [FAQ](#-faq) for common questions
+- 🔍 Search existing GitHub issues
 
-### ðŸ“Š Project Statistics
+### 📊 Project Statistics
 
 - **Total Services**: 18 microservices
 - **Lines of Code**: ~15,000+ (Python + JavaScript)
@@ -981,22 +981,22 @@ sum(rate(acti & Community
 - **Supported Platforms**: Docker Compose, Kubernetes, Azure
 - **LLM Providers**: 4 (OpenAI, Anthropic, Google, OpenRouter)
 
-### ðŸ† Achievements
+### 🏆 Achievements
 
-- âœ… **End-to-End Tested**: Complete incident lifecycle verified
-- âœ… **Production Ready**: Health checks, graceful shutdowns, error handling
-- âœ… **Cost Optimized**: Redis caching reduces LLM costs by 60-70%
-- âœ… **Fast**: < 2 minute MTTR for automated incidents
-- âœ… **Intelligent**: 75-95% confidence AI analysis
-- âœ… **Observable**: Comprehensive metrics and logging
+- ✅ **End-to-End Tested**: Complete incident lifecycle verified
+- ✅ **Production Ready**: Health checks, graceful shutdowns, error handling
+- ✅ **Cost Optimized**: Redis caching reduces LLM costs by 60-70%
+- ✅ **Fast**: < 2 minute MTTR for automated incidents
+- ✅ **Intelligent**: 75-95% confidence AI analysis
+- ✅ **Observable**: Comprehensive metrics and logging
 
-### ðŸŒŸ Star History
+### 🌟 Star History
 
-If you find this project useful, please consider giving it a â­ on GitHub!
+If you find this project useful, please consider giving it a ⭐ on GitHub!
 
 [![Star History Chart](https://api.star-history.com/svg?repos=nidhi-upadhye03/Agentic-system-for-devops&type=Date)](https://star-history.com/#nidhi-upadhye03/Agentic-system-for-devops&Date)
 
-### ðŸ“± Stay Updated
+### 📱 Stay Updated
 
 - Watch this repository for updates
 - Follow [@nidhi-upadhye03](https://github.com/nidhi-upadhye03) on GitHub
@@ -1004,7 +1004,7 @@ If you find this project useful, please consider giving it a â­ on GitHub!
 
 ---
 
-## ðŸŽ‰ Quick Links Summary
+## 🎉 Quick Links Summary
 
 | Resource | Link | Description |
 |----------|------|-------------|
@@ -1021,26 +1021,26 @@ If you find this project useful, please consider giving it a â­ on GitHub!
 
 ---
 
-**âš¡ Built with passion for autonomous DevOps by [nidhi-upadhye03](https://github.com/nidhi-upadhye03)**
+**⚡ Built with passion for autonomous DevOps by [nidhi-upadhye03](https://github.com/nidhi-upadhye03)**
 
-**ðŸš€ Transforming incident response from reactive to proactive, one AI agent at a time.**
+**🚀 Transforming incident response from reactive to proactive, one AI agent at a time.**
 
 ---
 
-**Last Updated:** January 7, 2026 | **Version:** 1.0.0 | **Status:** Production Ready âœ…
+**Last Updated:** January 7, 2026 | **Version:** 1.0.0 | **Status:** Production Ready ✅
 
 Prometheus alerts are pre-configured in `monitoring/prometheus/alerts.yml`:
 
-- âš ï¸ High incident detection rate (> 100/hour)
-- âš ï¸ Analysis failures (> 10% error rate)
-- âš ï¸ Action execution failures (> 5% error rate)
-- âš ï¸ LLM API errors (> 20 errors in 5 minutes)
-- âš ï¸ RabbitMQ queue backlog (> 100 messages)
-- âš ï¸ Agent container restarts (> 3 restarts in 10 minutes)
+- ⚠️ High incident detection rate (> 100/hour)
+- ⚠️ Analysis failures (> 10% error rate)
+- ⚠️ Action execution failures (> 5% error rate)
+- ⚠️ LLM API errors (> 20 errors in 5 minutes)
+- ⚠️ RabbitMQ queue backlog (> 100 messages)
+- ⚠️ Agent container restarts (> 3 restarts in 10 minutes)
 
 ---
 
-## ðŸ§ª Testing
+## 🧪 Testing
 
 ### Run Tests
 
@@ -1067,17 +1067,17 @@ kubectl logs -f deployment/analyzer-agent -n devops-agents
 
 ---
 
-## ðŸ”’ Security
+## 🔒 Security
 
-- âœ… **Secrets Management**: Kubernetes Secrets, Azure Key Vault
-- âœ… **RBAC**: Kubernetes service accounts with minimal permissions
-- âœ… **Network Policies**: Pod-to-pod traffic restrictions
-- âœ… **TLS/SSL**: HTTPS for all external APIs
-- âœ… **Security Scanning**: Trivy in CI/CD pipeline
+- ✅ **Secrets Management**: Kubernetes Secrets, Azure Key Vault
+- ✅ **RBAC**: Kubernetes service accounts with minimal permissions
+- ✅ **Network Policies**: Pod-to-pod traffic restrictions
+- ✅ **TLS/SSL**: HTTPS for all external APIs
+- ✅ **Security Scanning**: Trivy in CI/CD pipeline
 
 ---
 
-## ðŸ“ˆ Roadmap
+## 📈 Roadmap
 
 - [ ] **Phase 7**: Integration testing with test applications
 - [ ] **Phase 8**: Dashboard enhancements (Agent Timeline, Metrics)
@@ -1087,7 +1087,7 @@ kubectl logs -f deployment/analyzer-agent -n devops-agents
 
 ---
 
-## ðŸ¤ Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please:
 
@@ -1099,7 +1099,7 @@ Contributions are welcome! Please:
 
 ---
 
-## ðŸ“„ License
+## 📄 License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
@@ -1125,16 +1125,17 @@ Primary contribution by Nidhi:
 
 ---
 
-## ðŸ“ž Support
+## 📞 Support
 
 For questions, issues, or feedback:
 
-- ðŸ“ Open a [GitHub Issue](https://github.com/nidhi-upadhye03/Agentic-system-for-devops/issues)
-- ðŸ“§ Email: nidhiupadhye1302@gmail.com
-- ðŸ“– Read the docs: [IMPLEMENTATION_TRACKER.md](IMPLEMENTATION_TRACKER.md), [FUTUREVISION.md](FUTUREVISION.md)
+- 📝 Open a [GitHub Issue](https://github.com/nidhi-upadhye03/Agentic-system-for-devops/issues)
+- 📧 Email: nidhiupadhye1302@gmail.com
+- 📖 Read the docs: [IMPLEMENTATION_TRACKER.md](IMPLEMENTATION_TRACKER.md), [FUTUREVISION.md](FUTUREVISION.md)
 
 ---
 
-**âš¡ Built with passion for autonomous AI-driven DevOps by the team**
+**⚡ Built with passion for autonomous AI-driven DevOps by the team**
+
 
 
